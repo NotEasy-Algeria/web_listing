@@ -70,16 +70,16 @@ export default function GestionAdminPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between animate-fade-in">
-        <div className="animate-slide-in-left">
+      <div className="flex items-center justify-between">
+        <div>
           <h1 className="text-2xl font-bold text-gray-900">Gestion des Administrateurs</h1>
           <p className="text-gray-600 mt-1">Gérez les comptes administrateurs et leurs permissions</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="bg-[#007BFF] text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all duration-300 flex items-center space-x-2 hover-lift hover-glow animate-slide-in-right"
+          className="bg-[#007BFF] text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
         >
-          <svg className="w-5 h-5 transition-transform duration-200 group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
           <span>Nouvel Admin</span>
@@ -88,13 +88,13 @@ export default function GestionAdminPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover-lift stagger-item hover-glow transition-all duration-300">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 animate-fade-in">Total Admins</p>
-              <p className="text-2xl font-bold text-gray-900 animate-scale-in">{admins.length}</p>
+              <p className="text-sm font-medium text-gray-600">Total Admins</p>
+              <p className="text-2xl font-bold text-gray-900">{admins.length}</p>
             </div>
-            <div className="w-12 h-12 bg-[#007BFF]/10 rounded-lg flex items-center justify-center hover:scale-110 transition-transform duration-300 animate-pulse-custom">
+            <div className="w-12 h-12 bg-[#007BFF]/10 rounded-lg flex items-center justify-center">
               <svg className="w-6 h-6 text-[#007BFF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
               </svg>
@@ -102,15 +102,15 @@ export default function GestionAdminPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover-lift stagger-item hover-glow transition-all duration-300">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 animate-fade-in">Actifs</p>
-              <p className="text-2xl font-bold text-green-600 animate-scale-in">
+              <p className="text-sm font-medium text-gray-600">Actifs</p>
+              <p className="text-2xl font-bold text-green-600">
                 {admins.filter(admin => admin.status === "active").length}
               </p>
             </div>
-            <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center hover:scale-110 transition-transform duration-300 animate-pulse-custom">
+            <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
               <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -118,15 +118,15 @@ export default function GestionAdminPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover-lift stagger-item hover-glow transition-all duration-300">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 animate-fade-in">Inactifs</p>
-              <p className="text-2xl font-bold text-red-600 animate-scale-in">
+              <p className="text-sm font-medium text-gray-600">Inactifs</p>
+              <p className="text-2xl font-bold text-red-600">
                 {admins.filter(admin => admin.status === "inactive").length}
               </p>
             </div>
-            <div className="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center hover:scale-110 transition-transform duration-300 animate-pulse-custom">
+            <div className="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
               <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -134,15 +134,15 @@ export default function GestionAdminPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover-lift stagger-item hover-glow transition-all duration-300">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 animate-fade-in">Super Admins</p>
-              <p className="text-2xl font-bold text-purple-600 animate-scale-in">
+              <p className="text-sm font-medium text-gray-600">Super Admins</p>
+              <p className="text-2xl font-bold text-purple-600">
                 {admins.filter(admin => admin.role === "Super Admin").length}
               </p>
             </div>
-            <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center hover:scale-110 transition-transform duration-300 animate-pulse-custom">
+            <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
               <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
@@ -152,30 +152,30 @@ export default function GestionAdminPage() {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover-lift animate-slide-in-right">
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-          <div className="relative flex-1 max-w-md group">
+          <div className="relative flex-1 max-w-md">
             <input
               type="text"
               placeholder="Rechercher un administrateur..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent transition-all duration-300 hover:shadow-md focus:shadow-lg hover-lift"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
             />
-            <svg className="absolute left-3 top-2.5 w-5 h-5 text-gray-400 group-focus-within:text-[#007BFF] transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
 
-          <div className="flex items-center space-x-4 animate-fade-in">
-            <select className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent transition-all duration-300 hover:shadow-md focus:shadow-lg hover-lift">
+          <div className="flex items-center space-x-4">
+            <select className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent">
               <option value="">Tous les rôles</option>
               <option value="super-admin">Super Admin</option>
               <option value="admin">Admin</option>
               <option value="moderator">Moderator</option>
             </select>
 
-            <select className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent transition-all duration-300 hover:shadow-md focus:shadow-lg hover-lift">
+            <select className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent">
               <option value="">Tous les statuts</option>
               <option value="active">Actif</option>
               <option value="inactive">Inactif</option>
@@ -185,11 +185,11 @@ export default function GestionAdminPage() {
       </div>
 
       {/* Admins Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover-lift animate-slide-in-left">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
-              <tr className="animate-fade-in">
+              <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Administrateur
                 </th>
@@ -211,11 +211,11 @@ export default function GestionAdminPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredAdmins.map((admin, index) => (
-                <tr key={admin.id} className="hover:bg-gray-50 transition-all duration-300 hover-lift stagger-item" style={{animationDelay: `${index * 0.1}s`}}>
+              {filteredAdmins.map((admin) => (
+                <tr key={admin.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="w-10 h-10 bg-[#007BFF] rounded-full flex items-center justify-center hover:scale-110 transition-transform duration-300 animate-pulse-custom">
+                      <div className="w-10 h-10 bg-[#007BFF] rounded-full flex items-center justify-center">
                         <span className="text-white font-medium text-sm">
                           {admin.name.split(' ').map(n => n[0]).join('')}
                         </span>
@@ -271,7 +271,7 @@ export default function GestionAdminPage() {
                     <div className="flex items-center justify-end space-x-2">
                       <button
                         onClick={() => setSelectedAdmin(admin)}
-                        className="text-[#007BFF] hover:text-blue-700 p-1 hover:scale-110 transition-all duration-200 hover-glow"
+                        className="text-[#007BFF] hover:text-blue-700 p-1"
                         title="Modifier"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -281,15 +281,15 @@ export default function GestionAdminPage() {
                       
                       <button
                         onClick={() => handleToggleStatus(admin.id)}
-                        className={`p-1 hover:scale-110 transition-all duration-200 ${admin.status === "active" ? "text-red-600 hover:text-red-700" : "text-green-600 hover:text-green-700"}`}
+                        className={`p-1 ${admin.status === "active" ? "text-red-600 hover:text-red-700" : "text-green-600 hover:text-green-700"}`}
                         title={admin.status === "active" ? "Désactiver" : "Activer"}
                       >
                         {admin.status === "active" ? (
-                          <svg className="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
                           </svg>
                         ) : (
-                          <svg className="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                         )}
@@ -297,10 +297,10 @@ export default function GestionAdminPage() {
 
                       <button
                         onClick={() => handleDeleteAdmin(admin.id)}
-                        className="text-red-600 hover:text-red-700 p-1 hover:scale-110 transition-all duration-200 hover-glow"
+                        className="text-red-600 hover:text-red-700 p-1"
                         title="Supprimer"
                       >
-                        <svg className="w-4 h-4 hover:animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
@@ -315,19 +315,19 @@ export default function GestionAdminPage() {
 
       {/* Add Admin Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto animate-fade-in">
+        <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity animate-fade-in" onClick={() => setShowAddModal(false)}>
+            <div className="fixed inset-0 transition-opacity" onClick={() => setShowAddModal(false)}>
               <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
             </div>
 
-            <div className="inline-block align-bottom glass rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full animate-scale-in hover-lift">
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="flex items-center justify-between mb-4 animate-slide-in-right">
+                <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-gray-900">Nouvel Administrateur</h3>
                   <button
                     onClick={() => setShowAddModal(false)}
-                    className="text-gray-400 hover:text-gray-600 hover:scale-110 transition-all duration-200"
+                    className="text-gray-400 hover:text-gray-600"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -336,27 +336,27 @@ export default function GestionAdminPage() {
                 </div>
 
                 <form className="space-y-4">
-                  <div className="stagger-item">
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet</label>
                     <input
                       type="text"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent transition-all duration-300 hover:shadow-md focus:shadow-lg hover-lift"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
                       placeholder="Nom et prénom"
                     />
                   </div>
 
-                  <div className="stagger-item">
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                     <input
                       type="email"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent transition-all duration-300 hover:shadow-md focus:shadow-lg hover-lift"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
                       placeholder="email@example.com"
                     />
                   </div>
 
-                  <div className="stagger-item">
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Rôle</label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent transition-all duration-300 hover:shadow-md focus:shadow-lg hover-lift">
+                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent">
                       <option value="">Sélectionner un rôle</option>
                       <option value="admin">Admin</option>
                       <option value="moderator">Moderator</option>
@@ -364,12 +364,12 @@ export default function GestionAdminPage() {
                     </select>
                   </div>
 
-                  <div className="stagger-item">
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Permissions</label>
                     <div className="space-y-2">
-                      {["users", "doctors", "reports", "settings"].map((permission, index) => (
-                        <label key={permission} className="flex items-center stagger-item hover:bg-gray-50 p-2 rounded transition-colors duration-200" style={{animationDelay: `${index * 0.1}s`}}>
-                          <input type="checkbox" className="rounded border-gray-300 text-[#007BFF] focus:ring-[#007BFF] hover:scale-110 transition-transform duration-200" />
+                      {["users", "doctors", "reports", "settings"].map((permission) => (
+                        <label key={permission} className="flex items-center">
+                          <input type="checkbox" className="rounded border-gray-300 text-[#007BFF] focus:ring-[#007BFF]" />
                           <span className="ml-2 text-sm text-gray-700 capitalize">{permission}</span>
                         </label>
                       ))}
@@ -378,17 +378,17 @@ export default function GestionAdminPage() {
                 </form>
               </div>
 
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse animate-slide-in-left">
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                 <button
                   type="button"
-                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-[#007BFF] text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#007BFF] sm:ml-3 sm:w-auto sm:text-sm transition-all duration-300 hover-lift hover-glow"
+                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-[#007BFF] text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#007BFF] sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Créer
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-all duration-300 hover-lift"
+                  className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Annuler
                 </button>

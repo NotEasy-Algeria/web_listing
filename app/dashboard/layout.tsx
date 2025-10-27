@@ -116,32 +116,32 @@ export default function DashboardLayout({
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 left-0 z-50 w-64 h-screen bg-white shadow-xl transform transition-all duration-500 ease-in-out lg:translate-x-0 hover-lift ${
+        className={`fixed top-0 left-0 z-50 w-64 h-screen bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="relative h-24 px-6 bg-gradient-to-br from-[#007BFF] via-blue-600 to-blue-700 overflow-hidden animate-gradient">
+          <div className="relative h-24 px-6 bg-gradient-to-br from-[#007BFF] via-blue-600 to-blue-700 overflow-hidden">
             {/* Background Pattern */}
             <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-16 translate-x-16 animate-float"></div>
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-12 -translate-x-12 animate-float" style={{animationDelay: '1s'}}></div>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-16 translate-x-16"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-12 -translate-x-12"></div>
             </div>
             
-            <div className="relative flex items-center h-full animate-fade-in">
+            <div className="relative flex items-center h-full">
               <div className="flex items-center space-x-4">
                 <div className="relative">
-                  <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-xl border border-white/30 hover:scale-110 transition-transform duration-300">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-xl border border-white/30">
                     <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white"></div>
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-white tracking-tight animate-slide-in-right">Doctor App</h1>
-                  <p className="text-sm text-blue-100/80 font-medium animate-slide-in-left">Admin Panel</p>
+                  <h1 className="text-xl font-bold text-white tracking-tight">Doctor App</h1>
+                  <p className="text-sm text-blue-100/80 font-medium">Admin Panel</p>
                 </div>
               </div>
             </div>
@@ -152,27 +152,26 @@ export default function DashboardLayout({
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-            {navigation.map((item, index) => {
+            {navigation.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 group hover-lift stagger-item ${
+                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 group ${
                     isActive
-                      ? "bg-[#007BFF] text-white shadow-lg shadow-[#007BFF]/25 hover-glow"
+                      ? "bg-[#007BFF] text-white shadow-lg shadow-[#007BFF]/25"
                       : "text-gray-700 hover:bg-gray-100 hover:text-[#007BFF] hover:shadow-sm"
                   }`}
-                  style={{animationDelay: `${index * 0.1}s`}}
                 >
-                  <span className={`mr-3 transition-all duration-300 ${
-                    isActive ? "text-white scale-110" : "text-gray-500 group-hover:text-[#007BFF] group-hover:scale-110"
+                  <span className={`mr-3 transition-colors duration-200 ${
+                    isActive ? "text-white" : "text-gray-500 group-hover:text-[#007BFF]"
                   }`}>
                     {item.icon}
                   </span>
-                  <span className="transition-transform duration-200 group-hover:translate-x-1">{item.name}</span>
+                  {item.name}
                   {isActive && (
-                    <div className="ml-auto w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    <div className="ml-auto w-2 h-2 bg-white rounded-full"></div>
                   )}
                 </Link>
               );
@@ -180,16 +179,16 @@ export default function DashboardLayout({
           </nav>
 
           {/* Profile Section */}
-          <div className="p-4 border-t border-gray-200 bg-gray-50 animate-slide-in-left">
+          <div className="p-4 border-t border-gray-200 bg-gray-50">
             <Link
               href="/dashboard/profile"
-              className={`flex items-center px-4 py-4 text-sm font-medium rounded-xl transition-all duration-300 group hover-lift ${
+              className={`flex items-center px-4 py-4 text-sm font-medium rounded-xl transition-all duration-200 group ${
                 pathname === "/dashboard/profile"
-                  ? "bg-[#007BFF] text-white shadow-lg shadow-[#007BFF]/25 hover-glow"
+                  ? "bg-[#007BFF] text-white shadow-lg shadow-[#007BFF]/25"
                   : "text-gray-700 hover:bg-white hover:text-[#007BFF] hover:shadow-sm"
               }`}
             >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mr-3 transition-all duration-300 hover:scale-110 ${
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mr-3 transition-all duration-200 ${
                 pathname === "/dashboard/profile" 
                   ? "bg-white/20" 
                   : "bg-[#007BFF] group-hover:bg-[#007BFF]/80"
@@ -201,12 +200,12 @@ export default function DashboardLayout({
                 </svg>
               </div>
               <div className="flex-1">
-                <p className="font-semibold transition-transform duration-200 group-hover:translate-x-1">
+                <p className="font-semibold">
                   {admin ? `${admin.first_name} ${admin.last_name}` : 'Admin'}
                 </p>
                 <p className="text-xs opacity-75">Administrateur</p>
               </div>
-              <svg className={`w-4 h-4 transition-all duration-300 group-hover:translate-x-1 ${
+              <svg className={`w-4 h-4 transition-colors duration-200 ${
                 pathname === "/dashboard/profile" ? "text-white" : "text-gray-400 group-hover:text-[#007BFF]"
               }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -219,12 +218,12 @@ export default function DashboardLayout({
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
         {/* Top header */}
-        <header className="glass backdrop-blur-xl shadow-sm border-b border-gray-200/50 sticky top-0 z-30 animate-slide-in-right">
+        <header className="bg-white/80 backdrop-blur-xl shadow-sm border-b border-gray-200/50 sticky top-0 z-30">
           <div className="flex items-center justify-between px-6 py-5">
             <div className="flex items-center">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="p-2.5 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-100 lg:hidden transition-all duration-300 hover:scale-110"
+                className="p-2.5 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-100 lg:hidden transition-all duration-200"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -232,9 +231,9 @@ export default function DashboardLayout({
               </button>
               <div className="ml-4 lg:ml-0">
                 <div className="flex items-center space-x-3">
-                  <div className="w-1 h-8 bg-gradient-to-b from-[#007BFF] to-blue-600 rounded-full animate-pulse"></div>
+                  <div className="w-1 h-8 bg-gradient-to-b from-[#007BFF] to-blue-600 rounded-full"></div>
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight animate-fade-in">
+                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
                       {pathname === "/dashboard" && "Tableau de Bord"}
                       {pathname === "/dashboard/gestion-admin" && "Gestion Admin"}
                       {pathname === "/dashboard/gestion-abonnement" && "Gestion Abonnement"}
@@ -243,7 +242,7 @@ export default function DashboardLayout({
                       {pathname === "/dashboard/gestion-doctor" && "Gestion Docteurs"}
                       {pathname === "/dashboard/profile" && "Mon Profil"}
                     </h1>
-                    <p className="text-sm text-gray-500 font-medium animate-slide-in-left">
+                    <p className="text-sm text-gray-500 font-medium">
                       {pathname === "/dashboard" && "Vue d'ensemble de votre plateforme"}
                       {pathname === "/dashboard/gestion-admin" && "Gérez les administrateurs"}
                       {pathname === "/dashboard/gestion-abonnement" && "Gérez les abonnements"}
@@ -257,15 +256,15 @@ export default function DashboardLayout({
               </div>
             </div>
 
-            <div className="flex items-center space-x-3 animate-slide-in-left">
+            <div className="flex items-center space-x-3">
               {/* Search */}
-              <div className="relative group">
+              <div className="relative">
                 <input
                   type="text"
                   placeholder="Rechercher..."
-                  className="w-72 pl-11 pr-4 py-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#007BFF]/20 focus:border-[#007BFF] bg-gray-50/50 focus:bg-white transition-all duration-300 text-sm font-medium hover:shadow-md focus:shadow-lg hover-lift"
+                  className="w-72 pl-11 pr-4 py-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#007BFF]/20 focus:border-[#007BFF] bg-gray-50/50 focus:bg-white transition-all duration-200 text-sm font-medium"
                 />
-                <svg className="absolute left-4 top-3.5 w-4 h-4 text-gray-400 group-focus-within:text-[#007BFF] transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="absolute left-4 top-3.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
@@ -274,31 +273,31 @@ export default function DashboardLayout({
               <div className="relative profile-dropdown">
                 <button 
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center space-x-3 p-2 rounded-2xl hover:bg-gray-50 transition-all duration-300 group hover-lift"
+                  className="flex items-center space-x-3 p-2 rounded-2xl hover:bg-gray-50 transition-all duration-200 group"
                 >
                   <div className="relative">
-                    <div className="w-10 h-10 bg-gradient-to-br from-[#007BFF] to-blue-600 rounded-xl flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300">
+                    <div className="w-10 h-10 bg-gradient-to-br from-[#007BFF] to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
                       <span className="text-white font-bold text-sm">JD</span>
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white"></div>
                   </div>
                   <div className="hidden md:block text-left">
-                    <p className="text-sm font-semibold text-gray-900 transition-transform duration-200 group-hover:translate-x-1">
+                    <p className="text-sm font-semibold text-gray-900">
                       {admin ? `${admin.first_name} ${admin.last_name}` : 'Admin'}
                     </p>
                     <p className="text-xs text-gray-500 font-medium">Administrateur</p>
                   </div>
-                  <svg className={`w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-all duration-300 ${profileDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={`w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-all duration-200 ${profileDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
 
                 {/* Dropdown Menu */}
                 {profileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-64 glass rounded-2xl shadow-xl border border-gray-200/50 backdrop-blur-xl z-50 animate-scale-in">
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-200/50 backdrop-blur-xl z-50">
                     <div className="p-4 border-b border-gray-100">
-                      <div className="flex items-center space-x-3 animate-fade-in">
-                        <div className="w-12 h-12 bg-gradient-to-br from-[#007BFF] to-blue-600 rounded-xl flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-[#007BFF] to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
                           <span className="text-white font-bold">JD</span>
                         </div>
                         <div>
@@ -306,7 +305,7 @@ export default function DashboardLayout({
                             {admin ? `${admin.first_name} ${admin.last_name}` : 'Admin'}
                           </p>
                           <p className="text-sm text-gray-500">Administrateur</p>
-                          <p className="text-xs text-green-600 font-medium animate-pulse">En ligne</p>
+                          <p className="text-xs text-green-600 font-medium">En ligne</p>
                         </div>
                       </div>
                     </div>
@@ -315,14 +314,14 @@ export default function DashboardLayout({
                       <Link
                         href="/dashboard/profile"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center space-x-3 px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-all duration-300 group hover-lift stagger-item"
+                        className="flex items-center space-x-3 px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-colors group"
                       >
-                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-[#007BFF]/10 transition-all duration-300 group-hover:scale-110">
-                          <svg className="w-4 h-4 text-gray-500 group-hover:text-[#007BFF] transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-[#007BFF]/10 transition-colors">
+                          <svg className="w-4 h-4 text-gray-500 group-hover:text-[#007BFF] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
                         </div>
-                        <span className="transition-transform duration-200 group-hover:translate-x-1">Mon Profil</span>
+                        <span>Mon Profil</span>
                       </Link>
 
                       <button
@@ -330,14 +329,14 @@ export default function DashboardLayout({
                           setProfileDropdownOpen(false);
                           handleLogout();
                         }}
-                        className="w-full flex items-center space-x-3 px-3 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-all duration-300 group hover-lift stagger-item"
+                        className="w-full flex items-center space-x-3 px-3 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors group"
                       >
-                        <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-all duration-300 group-hover:scale-110">
+                        <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors">
                           <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                           </svg>
                         </div>
-                        <span className="transition-transform duration-200 group-hover:translate-x-1">Déconnexion</span>
+                        <span>Déconnexion</span>
                       </button>
                     </div>
                   </div>
@@ -348,10 +347,8 @@ export default function DashboardLayout({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-6 overflow-auto animate-fade-in">
-          <div className="animate-slide-in-right">
-            {children}
-          </div>
+        <main className="flex-1 p-6 overflow-auto">
+          {children}
         </main>
       </div>
       </div>
