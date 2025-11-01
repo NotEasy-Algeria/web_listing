@@ -46,15 +46,6 @@ const navigation = [
     ),
   },
   {
-    name: "Gestion Utilisateurs",
-    href: "/dashboard/gestion-user",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-      </svg>
-    ),
-  },
-  {
     name: "Gestion Docteurs",
     href: "/dashboard/gestion-doctor",
     icon: (
@@ -238,7 +229,6 @@ export default function DashboardLayout({
                       {pathname === "/dashboard/gestion-admin" && "Gestion Admin"}
                       {pathname === "/dashboard/gestion-abonnement" && "Gestion Abonnement"}
                       {pathname === "/dashboard/statistics" && "Statistiques"}
-                      {pathname === "/dashboard/gestion-user" && "Gestion Utilisateurs"}
                       {pathname === "/dashboard/gestion-doctor" && "Gestion Docteurs"}
                       {pathname === "/dashboard/profile" && "Mon Profil"}
                     </h1>
@@ -247,7 +237,6 @@ export default function DashboardLayout({
                       {pathname === "/dashboard/gestion-admin" && "Gérez les administrateurs"}
                       {pathname === "/dashboard/gestion-abonnement" && "Gérez les abonnements"}
                       {pathname === "/dashboard/statistics" && "Analysez les performances"}
-                      {pathname === "/dashboard/gestion-user" && "Gérez les utilisateurs"}
                       {pathname === "/dashboard/gestion-doctor" && "Gérez les docteurs"}
                       {pathname === "/dashboard/profile" && "Informations personnelles"}
                     </p>
@@ -257,18 +246,6 @@ export default function DashboardLayout({
             </div>
 
             <div className="flex items-center space-x-3">
-              {/* Search */}
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Rechercher..."
-                  className="w-72 pl-11 pr-4 py-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#007BFF]/20 focus:border-[#007BFF] bg-gray-50/50 focus:bg-white transition-all duration-200 text-sm font-medium"
-                />
-                <svg className="absolute left-4 top-3.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-
               {/* Profile dropdown */}
               <div className="relative profile-dropdown">
                 <button 

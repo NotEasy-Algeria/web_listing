@@ -38,14 +38,28 @@ export function AdminProvider({ children }: AdminProviderProps) {
     loadAdmin();
   }, []);
 
-  // Refresh admin data from localStorage
+  // Refresh admin data from Supabase
   const refreshAdmin = async () => {
     try {
-      const adminData = AuthService.getCurrentUser();
-      setAdmin(adminData);
+      const currentAdmin = AuthService.getCurrentUser();
+      if (currentAdmin && currentAdmin.id) {
+        // Fetch fresh data from Supabase
+        const updatedAdmin = await AuthService.getAdminProfile(currentAdmin.id);
+        if (updatedAdmin) {
+          // Update localStorage with fresh data
+          AuthService.setCurrentUser(updatedAdmin);
+          setAdmin(updatedAdmin);
+        }
+      } else {
+        // Fallback to localStorage if no admin ID
+        const adminData = AuthService.getCurrentUser();
+        setAdmin(adminData);
+      }
     } catch (error) {
       console.error("Error refreshing admin data:", error);
-      setAdmin(null);
+      // Fallback to localStorage on error
+      const adminData = AuthService.getCurrentUser();
+      setAdmin(adminData);
     }
   };
 

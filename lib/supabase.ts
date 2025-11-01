@@ -38,37 +38,34 @@ export interface Database {
       doctors: {
         Row: {
           id: string
-          user_id: string
-          speciality: string
-          license_number: string
-          experience_years: number
-          location: string
-          bio: string
-          status: 'active' | 'inactive' | 'pending'
+          first_name: string | null
+          last_name: string | null
+          email: string | null
+          field: string | null
+          status: boolean
+          phone: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
-          user_id: string
-          speciality: string
-          license_number: string
-          experience_years: number
-          location: string
-          bio?: string
-          status?: 'active' | 'inactive' | 'pending'
+          first_name?: string | null
+          last_name?: string | null
+          email?: string | null
+          field?: string | null
+          status?: boolean
+          phone?: string | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
-          user_id?: string
-          speciality?: string
-          license_number?: string
-          experience_years?: number
-          location?: string
-          bio?: string
-          status?: 'active' | 'inactive' | 'pending'
+          first_name?: string | null
+          last_name?: string | null
+          email?: string | null
+          field?: string | null
+          status?: boolean
+          phone?: string | null
           created_at?: string
           updated_at?: string
         }

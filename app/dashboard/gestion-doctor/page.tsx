@@ -1,164 +1,387 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { DatabaseService } from "@/lib/database";
+import { supabase } from "@/lib/supabase";
 
 interface Doctor {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  speciality: string;
-  license: string;
-  status: "active" | "inactive" | "pending" | "suspended";
-  registrationDate: string;
-  lastLogin: string;
-  totalPatients: number;
-  rating: number;
-  experience: string;
-  location: string;
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+  field: string | null;
+  status: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function GestionDoctorPage() {
-  const [doctors, setDoctors] = useState<Doctor[]>([
-    {
-      id: 1,
-      name: "Dr. Jean Martin",
-      email: "jean.martin@doctorapp.com",
-      phone: "+33 6 12 34 56 78",
-      speciality: "Cardiologie",
-      license: "123456789",
-      status: "active",
-      registrationDate: "2024-01-10",
-      lastLogin: "2024-01-20 14:30",
-      totalPatients: 156,
-      rating: 4.9,
-      experience: "15 ans",
-      location: "Paris"
-    },
-    {
-      id: 2,
-      name: "Dr. Sophie Dubois",
-      email: "sophie.dubois@doctorapp.com",
-      phone: "+33 6 98 76 54 32",
-      speciality: "Pédiatrie",
-      license: "987654321",
-      status: "active",
-      registrationDate: "2024-01-08",
-      lastLogin: "2024-01-19 09:15",
-      totalPatients: 142,
-      rating: 4.8,
-      experience: "12 ans",
-      location: "Lyon"
-    },
-    {
-      id: 3,
-      name: "Dr. Laurent Bernard",
-      email: "laurent.bernard@doctorapp.com",
-      phone: "+33 6 11 22 33 44",
-      speciality: "Dermatologie",
-      license: "456789123",
-      status: "pending",
-      registrationDate: "2024-01-18",
-      lastLogin: "2024-01-18 16:45",
-      totalPatients: 0,
-      rating: 0,
-      experience: "8 ans",
-      location: "Marseille"
-    },
-    {
-      id: 4,
-      name: "Dr. Marie Moreau",
-      email: "marie.moreau@doctorapp.com",
-      phone: "+33 6 55 66 77 88",
-      speciality: "Gynécologie",
-      license: "789123456",
-      status: "inactive",
-      registrationDate: "2023-12-15",
-      lastLogin: "2024-01-05 11:20",
-      totalPatients: 98,
-      rating: 4.6,
-      experience: "20 ans",
-      location: "Toulouse"
-    },
-    {
-      id: 5,
-      name: "Dr. Pierre Leroy",
-      email: "pierre.leroy@doctorapp.com",
-      phone: "+33 6 99 88 77 66",
-      speciality: "Orthopédie",
-      license: "321654987",
-      status: "suspended",
-      registrationDate: "2024-01-12",
-      lastLogin: "2024-01-15 08:45",
-      totalPatients: 67,
-      rating: 4.2,
-      experience: "10 ans",
-      location: "Nice"
-    }
-  ]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [specialityFilter, setSpecialityFilter] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  
+  // Form state for creating new doctor
+  const [formData, setFormData] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    field: "",
+  });
+  const [creating, setCreating] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Load doctors from Supabase
+  useEffect(() => {
+    const loadDoctors = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await DatabaseService.getDoctors();
+        setDoctors(data || []);
+      } catch (e: any) {
+        console.error('Error loading doctors:', e);
+        setError(e?.message || "Erreur de chargement des docteurs");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDoctors();
+  }, []);
 
   const filteredDoctors = doctors.filter(doctor => {
-    const matchesSearch = doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doctor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doctor.speciality.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doctor.location.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = !statusFilter || doctor.status === statusFilter;
-    const matchesSpeciality = !specialityFilter || doctor.speciality === specialityFilter;
+    const fullName = `${doctor.first_name || ''} ${doctor.last_name || ''}`.toLowerCase();
+    const matchesSearch = !searchTerm || 
+                         fullName.includes(searchTerm.toLowerCase()) ||
+                         (doctor.email && doctor.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (doctor.field && doctor.field.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    return matchesSearch && matchesStatus && matchesSpeciality;
+    const matchesStatus = !statusFilter || 
+                         (statusFilter === "active" && doctor.status === true) ||
+                         (statusFilter === "inactive" && doctor.status === false);
+    
+    return matchesSearch && matchesStatus;
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active": return "bg-green-100 text-green-800";
-      case "inactive": return "bg-gray-100 text-gray-800";
-      case "pending": return "bg-yellow-100 text-yellow-800";
-      case "suspended": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+  const getStatusColor = (status: boolean) => {
+    return status ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800";
+  };
+
+  const getStatusText = (status: boolean) => {
+    return status ? "Actif" : "En attente";
+  };
+
+  // Check if email exists in Supabase
+  const checkEmailExists = async (email: string): Promise<boolean> => {
+    try {
+      const allDoctors = await DatabaseService.getDoctors();
+      return allDoctors.some(doc => doc.email?.toLowerCase() === email.toLowerCase());
+    } catch (e) {
+      console.error('Error checking email:', e);
+      return false;
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "active": return "Actif";
-      case "inactive": return "Inactif";
-      case "pending": return "En attente";
-      case "suspended": return "Suspendu";
-      default: return status;
+  // Create new doctor
+  const handleCreateDoctor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+    setCreating(true);
+
+    try {
+      // Validate form
+      if (!formData.first_name || !formData.last_name || !formData.email) {
+        setFormError("Veuillez remplir tous les champs obligatoires (Nom, Prénom, Email)");
+        setCreating(false);
+        return;
+      }
+
+      // Check if email exists in doctors table
+      const emailExists = await checkEmailExists(formData.email);
+      if (emailExists) {
+        setFormError("Cet email est déjà utilisé par un autre docteur");
+        setCreating(false);
+        return;
+      }
+
+      // Generate a temporary password for the doctor (they'll need to reset it)
+      // In production, you might want to generate this server-side or send via email
+      const tempPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12) + "!@#";
+
+      // Create user in Supabase Auth - this will automatically send confirmation email
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: tempPassword,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            first_name: formData.first_name,
+            last_name: formData.last_name,
+            role: 'doctor'
+          }
+        }
+      });
+
+      if (authError) {
+        // Check if user already exists in auth
+        if (authError.message.includes('already registered')) {
+          setFormError("Cet email est déjà enregistré dans le système d'authentification");
+          setCreating(false);
+          return;
+        }
+        throw new Error(`Erreur lors de la création du compte: ${authError.message}`);
+      }
+
+      if (!authData.user) {
+        throw new Error("Erreur: Aucun utilisateur créé dans Supabase Auth");
+      }
+
+      // Create doctor record in database
+      const newDoctor = await DatabaseService.createDoctor({
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        email: formData.email,
+        phone: formData.phone || null,
+        field: formData.field || null,
+        status: false, // Default to inactive/pending
+      });
+
+      // Note: Supabase Auth automatically sends confirmation email when signUp is called
+      // The user will receive an email to confirm their email address
+
+      // Save email for success message before resetting form
+      const doctorEmail = formData.email;
+
+      // Add to list and close modal
+      setDoctors([newDoctor, ...doctors]);
+      setShowAddModal(false);
+      setFormData({
+        first_name: "",
+        last_name: "",
+        email: "",
+        phone: "",
+        field: "",
+      });
+      setFormError(null);
+      
+      // Show success modal
+      setSuccessMessage(
+        `Un email de confirmation a été envoyé à ${doctorEmail}. Le docteur devra confirmer son email avant de pouvoir se connecter.`
+      );
+      setShowSuccessModal(true);
+    } catch (e: any) {
+      console.error('Error creating doctor:', e);
+      setFormError(e?.message || "Erreur lors de la création du docteur");
+    } finally {
+      setCreating(false);
     }
   };
 
-  const handleDeleteDoctor = (id: number) => {
-    if (confirm("Êtes-vous sûr de vouloir supprimer ce docteur ?")) {
-      setDoctors(doctors.filter(doctor => doctor.id !== id));
+  const handleDeleteDoctor = async (id: string) => {
+    if (confirm("Êtes-vous sûr de vouloir supprimer ce docteur ? Cette action est irréversible.")) {
+      try {
+        await DatabaseService.deleteDoctor(id);
+        setDoctors(doctors.filter(doctor => doctor.id !== id));
+      } catch (e: any) {
+        console.error('Error deleting doctor:', e);
+        alert("Erreur lors de la suppression: " + (e?.message || "Erreur inconnue"));
+      }
     }
   };
 
-  const handleApproveDoctor = (id: number) => {
-    setDoctors(doctors.map(doctor =>
-      doctor.id === id ? { ...doctor, status: "active" } : doctor
-    ));
+  // Export doctors to file (CSV/TXT)
+  const handleExportDoctors = () => {
+    setShowExportMenu(false);
+    
+    const reportContent = `
+╔════════════════════════════════════════════════════════════════╗
+║                  LISTE DES DOCTEURS                              ║
+╚════════════════════════════════════════════════════════════════╝
+
+Date du rapport: ${new Date().toLocaleDateString('fr-FR', { 
+  year: 'numeric', 
+  month: 'long', 
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit'
+})}
+
+═══════════════════════════════════════════════════════════════════
+📊 RÉSUMÉ
+═══════════════════════════════════════════════════════════════════
+
+• Total Docteurs: ${totalDoctors}
+• Docteurs Actifs: ${activeDoctors}
+• Docteurs en Attente: ${pendingDoctors}
+
+═══════════════════════════════════════════════════════════════════
+👨‍⚕️ LISTE DES DOCTEURS
+═══════════════════════════════════════════════════════════════════
+
+${filteredDoctors.length === 0 ? 'Aucun docteur trouvé' : filteredDoctors.map((doctor, index) => {
+  const fullName = `${doctor.first_name || ''} ${doctor.last_name || ''}`.trim() || 'Sans nom';
+  const status = doctor.status ? 'Actif' : 'En attente';
+  const createdAt = new Date(doctor.created_at).toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  
+  return `
+${index + 1}. ${fullName}
+   Email: ${doctor.email || 'N/A'}
+   Téléphone: ${doctor.phone || 'N/A'}
+   Domaine: ${doctor.field || 'Non spécifié'}
+   Statut: ${status}
+   Date d'inscription: ${createdAt}
+`;
+}).join('\n')}
+
+═══════════════════════════════════════════════════════════════════
+
+Rapport généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}
+`;
+
+    // Create blob and download
+    const blob = new Blob([reportContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `liste-docteurs-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
-  const handleToggleStatus = (id: number, newStatus: "active" | "inactive" | "suspended") => {
-    setDoctors(doctors.map(doctor =>
-      doctor.id === id ? { ...doctor, status: newStatus } : doctor
-    ));
+  // Print doctors list
+  const handlePrintDoctors = () => {
+    setShowExportMenu(false);
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const printContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Liste des Docteurs - Doctor App</title>
+  <style>
+    @media print {
+      body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+      .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #007BFF; padding-bottom: 10px; }
+      .section { margin: 20px 0; page-break-inside: avoid; }
+      .section h2 { color: #007BFF; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+      table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+      th { background-color: #007BFF; color: white; }
+      .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #666; border-top: 1px solid #ddd; padding-top: 10px; }
+    }
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #007BFF; padding-bottom: 10px; }
+    .section { margin: 20px 0; }
+    .section h2 { color: #007BFF; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #007BFF; color: white; }
+    .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #666; border-top: 1px solid #ddd; padding-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📋 Liste des Docteurs</h1>
+    <p>Date: ${new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+  </div>
+
+  <div class="section">
+    <h2>📊 Résumé</h2>
+    <table>
+      <tr>
+        <td><strong>Total Docteurs</strong></td>
+        <td>${totalDoctors}</td>
+      </tr>
+      <tr>
+        <td>Docteurs Actifs</td>
+        <td>${activeDoctors}</td>
+      </tr>
+      <tr>
+        <td>Docteurs en Attente</td>
+        <td>${pendingDoctors}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>👨‍⚕️ Liste des Docteurs</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nom complet</th>
+          <th>Email</th>
+          <th>Téléphone</th>
+          <th>Domaine</th>
+          <th>Statut</th>
+          <th>Date d'inscription</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filteredDoctors.length === 0 ? '<tr><td colspan="7" style="text-align: center;">Aucun docteur trouvé</td></tr>' : filteredDoctors.map((doctor, index) => {
+          const fullName = `${doctor.first_name || ''} ${doctor.last_name || ''}`.trim() || 'Sans nom';
+          const status = doctor.status ? 'Actif' : 'En attente';
+          const createdAt = new Date(doctor.created_at).toLocaleDateString('fr-FR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+          
+          return `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${fullName}</td>
+          <td>${doctor.email || 'N/A'}</td>
+          <td>${doctor.phone || 'N/A'}</td>
+          <td>${doctor.field || 'Non spécifié'}</td>
+          <td>${status}</td>
+          <td>${createdAt}</td>
+        </tr>
+        `;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    <p>Rapport généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
+  </div>
+</body>
+</html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // Wait for content to load, then print
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
   };
 
-  const activeDoctors = doctors.filter(doctor => doctor.status === "active").length;
-  const pendingDoctors = doctors.filter(doctor => doctor.status === "pending").length;
-  const suspendedDoctors = doctors.filter(doctor => doctor.status === "suspended").length;
-  const totalPatients = doctors.reduce((sum, doctor) => sum + doctor.totalPatients, 0);
-  const averageRating = doctors.filter(d => d.rating > 0).reduce((sum, doctor) => sum + doctor.rating, 0) / doctors.filter(d => d.rating > 0).length;
 
-  const specialities = [...new Set(doctors.map(doctor => doctor.speciality))];
+  // Calculate dynamic stats
+  const totalDoctors = doctors.length;
+  const activeDoctors = doctors.filter(doctor => doctor.status === true).length;
+  const pendingDoctors = doctors.filter(doctor => doctor.status === false).length;
 
   return (
     <div className="space-y-6">
@@ -180,12 +403,12 @@ export default function GestionDoctorPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Docteurs</p>
-              <p className="text-2xl font-bold text-gray-900">{doctors.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{totalDoctors}</p>
             </div>
             <div className="w-12 h-12 bg-[#007BFF]/10 rounded-lg flex items-center justify-center">
               <svg className="w-6 h-6 text-[#007BFF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,34 +445,6 @@ export default function GestionDoctorPage() {
             </div>
           </div>
         </div>
-
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Patients</p>
-              <p className="text-2xl font-bold text-purple-600">{totalPatients}</p>
-            </div>
-            <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Note Moyenne</p>
-              <p className="text-2xl font-bold text-orange-600">{averageRating.toFixed(1)}</p>
-            </div>
-            <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-orange-600" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Search and Filters */}
@@ -276,199 +471,190 @@ export default function GestionDoctorPage() {
             >
               <option value="">Tous les statuts</option>
               <option value="active">Actif</option>
-              <option value="inactive">Inactif</option>
-              <option value="pending">En attente</option>
-              <option value="suspended">Suspendu</option>
+              <option value="inactive">En attente</option>
             </select>
 
-            <select 
-              value={specialityFilter}
-              onChange={(e) => setSpecialityFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
-            >
-              <option value="">Toutes les spécialités</option>
-              {specialities.map((speciality) => (
-                <option key={speciality} value={speciality}>{speciality}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <button 
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>Exporter</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
 
-            <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <span>Exporter</span>
-            </button>
+              {/* Export Menu Dropdown */}
+              {showExportMenu && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-[9997]" 
+                    onClick={() => setShowExportMenu(false)}
+                  ></div>
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-[9998]">
+                    <button
+                      onClick={handleExportDoctors}
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center space-x-2 transition-colors"
+                    >
+                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="text-gray-700">Télécharger</span>
+                    </button>
+                    <button
+                      onClick={handlePrintDoctors}
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center space-x-2 transition-colors border-t border-gray-200"
+                    >
+                      <svg className="w-5 h-5 text-[#007BFF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                      </svg>
+                      <span className="text-gray-700">Imprimer</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Doctors Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Docteur
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Spécialité
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Statut
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Patients
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Note
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Localisation
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredDoctors.map((doctor) => (
-                <tr key={doctor.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-[#007BFF] rounded-full flex items-center justify-center">
-                        <span className="text-white font-medium text-sm">
-                          {doctor.name.split(' ')[1][0]}
-                        </span>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{doctor.name}</div>
-                        <div className="text-sm text-gray-500">{doctor.experience} d'expérience</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{doctor.speciality}</div>
-                    <div className="text-sm text-gray-500">Licence: {doctor.license}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{doctor.email}</div>
-                    <div className="text-sm text-gray-500">{doctor.phone}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(doctor.status)}`}>
-                      {getStatusText(doctor.status)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {doctor.totalPatients}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {doctor.rating > 0 ? (
-                      <div className="flex items-center">
-                        <svg className="w-4 h-4 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                        </svg>
-                        <span className="text-sm font-medium text-gray-900">{doctor.rating}</span>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-500">Pas encore noté</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {doctor.location}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
-                      {doctor.status === "pending" && (
-                        <button
-                          onClick={() => handleApproveDoctor(doctor.id)}
-                          className="text-green-600 hover:text-green-700 p-1"
-                          title="Approuver"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </button>
-                      )}
-                      
-                      <button
-                        onClick={() => setSelectedDoctor(doctor)}
-                        className="text-[#007BFF] hover:text-blue-700 p-1"
-                        title="Voir détails"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      </button>
-                      
-                      <button
-                        className="text-green-600 hover:text-green-700 p-1"
-                        title="Modifier"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-
-                      {doctor.status === "active" ? (
-                        <button
-                          onClick={() => handleToggleStatus(doctor.id, "suspended")}
-                          className="text-red-600 hover:text-red-700 p-1"
-                          title="Suspendre"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
-                          </svg>
-                        </button>
-                      ) : doctor.status === "suspended" ? (
-                        <button
-                          onClick={() => handleToggleStatus(doctor.id, "active")}
-                          className="text-green-600 hover:text-green-700 p-1"
-                          title="Réactiver"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </button>
-                      ) : null}
-
-                      <button
-                        onClick={() => handleDeleteDoctor(doctor.id)}
-                        className="text-red-600 hover:text-red-700 p-1"
-                        title="Supprimer"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#007BFF] mb-4"></div>
+            <p className="text-gray-600">Chargement des docteurs...</p>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">{error}</p>
+        </div>
+      )}
+
+      {/* Doctors Table */}
+      {!loading && !error && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Docteur
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Domaine
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Contact
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Statut
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date d'inscription
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredDoctors.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                      Aucun docteur trouvé
+                    </td>
+                  </tr>
+                ) : (
+                  filteredDoctors.map((doctor) => {
+                    const firstName = doctor.first_name || '';
+                    const lastName = doctor.last_name || '';
+                    const fullName = `${firstName} ${lastName}`.trim() || 'Sans nom';
+                    const initials = `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase() || 'DN';
+                    
+                    return (
+                      <tr key={doctor.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="w-10 h-10 bg-[#007BFF] rounded-full flex items-center justify-center">
+                              <span className="text-white font-medium text-sm">
+                                {initials}
+                              </span>
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">{fullName}</div>
+                              <div className="text-sm text-gray-500">
+                                {new Date(doctor.created_at).toLocaleDateString('fr-FR')}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">
+                            {doctor.field || 'Non spécifié'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{doctor.email || 'N/A'}</div>
+                          <div className="text-sm text-gray-500">{doctor.phone || 'N/A'}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(doctor.status)}`}>
+                            {getStatusText(doctor.status)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(doctor.created_at).toLocaleDateString('fr-FR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <button
+                            onClick={() => handleDeleteDoctor(doctor.id)}
+                            className="text-red-600 hover:text-red-700 p-1"
+                            title="Supprimer"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Add Doctor Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="fixed inset-0 z-[9999] overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" onClick={() => setShowAddModal(false)}>
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
+            <div className="fixed inset-0 transition-opacity bg-gray-500 opacity-75 z-[9998]" onClick={() => setShowAddModal(false)}></div>
 
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full relative z-[9999]">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-gray-900">Nouveau Docteur</h3>
                   <button
-                    onClick={() => setShowAddModal(false)}
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setFormData({ first_name: "", last_name: "", email: "", phone: "", field: "" });
+                      setFormError(null);
+                    }}
                     className="text-gray-400 hover:text-gray-600"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -477,20 +663,50 @@ export default function GestionDoctorPage() {
                   </button>
                 </div>
 
-                <form className="space-y-4">
+                {formError && (
+                  <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-sm text-red-800">{formError}</p>
+                  </div>
+                )}
+
+                <form onSubmit={handleCreateDoctor} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Prénom <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
+                      required
+                      value={formData.first_name}
+                      onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
-                      placeholder="Dr. Nom Prénom"
+                      placeholder="Prénom"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nom <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.last_name}
+                      onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                      placeholder="Nom"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="email"
+                      required
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
                       placeholder="email@doctorapp.com"
                     />
@@ -500,15 +716,21 @@ export default function GestionDoctorPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
                     <input
                       type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
                       placeholder="+33 6 12 34 56 78"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Spécialité</label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent">
-                      <option value="">Sélectionner une spécialité</option>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Domaine</label>
+                    <select 
+                      value={formData.field}
+                      onChange={(e) => setFormData({ ...formData, field: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                    >
+                      <option value="">Sélectionner un domaine</option>
                       <option value="Cardiologie">Cardiologie</option>
                       <option value="Pédiatrie">Pédiatrie</option>
                       <option value="Dermatologie">Dermatologie</option>
@@ -517,40 +739,76 @@ export default function GestionDoctorPage() {
                       <option value="Médecine Générale">Médecine Générale</option>
                     </select>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Numéro de licence</label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
-                      placeholder="123456789"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Localisation</label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
-                      placeholder="Ville"
-                    />
-                  </div>
                 </form>
               </div>
 
               <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                 <button
                   type="button"
-                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-[#007BFF] text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#007BFF] sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={handleCreateDoctor}
+                  disabled={creating}
+                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-[#007BFF] text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#007BFF] disabled:opacity-50 disabled:cursor-not-allowed sm:ml-3 sm:w-auto sm:text-sm"
                 >
-                  Créer
+                  {creating ? "Création..." : "Créer"}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setFormData({ first_name: "", last_name: "", email: "", phone: "", field: "" });
+                    setFormError(null);
+                  }}
                   className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-[9999] overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity bg-gray-500 opacity-75 z-[9998]" onClick={() => setShowSuccessModal(false)}></div>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full relative z-[9999]">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                    <svg
+                      className="w-8 h-8 text-green-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                
+                <div className="text-center">
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Docteur créé avec succès !</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    {successMessage}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={() => setShowSuccessModal(false)}
+                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-[#007BFF] text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#007BFF] sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  OK
                 </button>
               </div>
             </div>

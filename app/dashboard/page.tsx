@@ -2,91 +2,59 @@
 
 import { useState, useEffect } from "react";
 import { useAdmin } from "../../contexts/AdminContext";
-import AdminInfo from "../../components/AdminInfo";
+import { DatabaseService } from "../../lib/database";
 
 export default function DashboardPage() {
   const { admin } = useAdmin();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({
-    totalPatients: 1247,
-    totalDoctors: 89,
-    totalAppointments: 324,
-    totalRevenue: 45680,
-    monthlyGrowth: 12.5,
-    appointmentsToday: 18,
-    pendingApprovals: 7,
-    activeSubscriptions: 156
+    totalDoctors: 0,
+    totalAppointments: 0,
+    totalRevenue: 0,
+    monthlyGrowth: 0,
+    pendingApprovals: 0,
+    activeSubscriptions: 0
   });
 
-  const recentActivities = [
-    {
-      id: 1,
-      type: "appointment",
-      message: "Nouveau rendez-vous avec Dr. Martin",
-      time: "Il y a 5 minutes",
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-      )
-    },
-    {
-      id: 2,
-      type: "user",
-      message: "Nouvel utilisateur enregistré",
-      time: "Il y a 12 minutes",
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
-      )
-    },
-    {
-      id: 3,
-      type: "payment",
-      message: "Paiement reçu - 150€",
-      time: "Il y a 1 heure",
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-        </svg>
-      )
-    },
-    {
-      id: 4,
-      type: "doctor",
-      message: "Dr. Sophie Dubois a rejoint l'équipe",
-      time: "Il y a 2 heures",
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      )
-    }
-  ];
+  const [activities, setActivities] = useState<Array<{ id: string; type: string; message: string; created_at: string }>>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
+  const [showAllActivities, setShowAllActivities] = useState(false);
 
-  const upcomingAppointments = [
-    {
-      id: 1,
-      patient: "Marie Dupont",
-      doctor: "Dr. Martin",
-      time: "09:00",
-      type: "Consultation"
-    },
-    {
-      id: 2,
-      patient: "Jean Pierre",
-      doctor: "Dr. Sophie",
-      time: "10:30",
-      type: "Contrôle"
-    },
-    {
-      id: 3,
-      patient: "Alice Bernard",
-      doctor: "Dr. Laurent",
-      time: "14:00",
-      type: "Urgence"
-    }
-  ];
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const result = await DatabaseService.getDashboardStats();
+        setStats((prev) => ({
+          ...prev,
+          totalDoctors: result.totalDoctors,
+          totalAppointments: result.totalAppointments,
+          totalRevenue: result.totalRevenue,
+        }));
+      } catch (e: any) {
+        setError(e?.message || "Impossible de charger les statistiques");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadStats();
+  }, []);
+
+  useEffect(() => {
+    const loadActivities = async () => {
+      try {
+        setActivitiesLoading(true);
+        const limit = showAllActivities ? 50 : 8;
+        const data = await DatabaseService.getRecentActivities(limit);
+        setActivities(data);
+      } finally {
+        setActivitiesLoading(false);
+      }
+    };
+    loadActivities();
+  }, [showAllActivities]);
 
   return (
     <div className="space-y-6">
@@ -109,37 +77,20 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total Patients */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Patients</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.totalPatients.toLocaleString()}</p>
-              <p className="text-sm text-green-600 mt-1">
-                <span className="inline-flex items-center">
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                  </svg>
-                  +{stats.monthlyGrowth}% ce mois
-                </span>
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-[#007BFF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
-          </div>
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl" role="alert">
+          {error}
         </div>
+      )}
 
-        {/* Total Doctors */}
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Total Doctors (dynamic) */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Docteurs</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.totalDoctors}</p>
+              <p className="text-3xl font-bold text-gray-900">{isLoading ? '—' : stats.totalDoctors}</p>
               <p className="text-sm text-blue-600 mt-1">
                 <span className="inline-flex items-center">
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -157,35 +108,12 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Appointments Today */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">RDV Aujourd'hui</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.appointmentsToday}</p>
-              <p className="text-sm text-orange-600 mt-1">
-                <span className="inline-flex items-center">
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  3 en cours
-                </span>
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
         {/* Revenue */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Revenus Mensuels</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.totalRevenue.toLocaleString()}€</p>
+              <p className="text-3xl font-bold text-gray-900">{isLoading ? '—' : stats.totalRevenue.toLocaleString()} da</p>
               <p className="text-sm text-green-600 mt-1">
                 <span className="inline-flex items-center">
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,103 +132,71 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Admin Info and Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Admin Info */}
-        <div className="lg:col-span-1">
-          <AdminInfo />
-        </div>
-        
-        {/* Charts and Activities */}
-        <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Activities */}
+      {/* Activités Récentes */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900">Activités Récentes</h3>
-            <button className="text-[#007BFF] hover:text-blue-700 text-sm font-medium">
-              Voir tout
+          <button onClick={() => setShowAllActivities((v) => !v)} className="text-[#007BFF] hover:text-blue-700 text-sm font-medium">
+            {showAllActivities ? 'Voir moins' : 'Voir tout'}
             </button>
           </div>
           <div className="space-y-4">
-            {recentActivities.map((activity) => (
+          {activitiesLoading ? (
+            <div className="animate-pulse space-y-3">
+              <div className="h-4 bg-gray-100 rounded" />
+              <div className="h-4 bg-gray-100 rounded w-5/6" />
+              <div className="h-4 bg-gray-100 rounded w-4/6" />
+            </div>
+          ) : activities.length === 0 ? (
+            <p className="text-sm text-gray-500">Aucune activité récente.</p>
+          ) : (
+            activities.map((activity) => (
               <div key={activity.id} className="flex items-center space-x-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
                 <div className="w-8 h-8 bg-[#007BFF]/10 rounded-full flex items-center justify-center text-[#007BFF]">
-                  {activity.icon}
+                  {activity.type === 'appointment' && (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  )}
+                  {activity.type === 'user' && (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  )}
+                  {activity.type === 'doctor' && (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  )}
+                  {activity.type === 'subscription' && (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                  )}
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-900">{activity.message}</p>
-                  <p className="text-xs text-gray-500">{activity.time}</p>
+                  <p className="text-xs text-gray-500">{new Date(activity.created_at).toLocaleString('fr-FR')}</p>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-
-          {/* Upcoming Appointments */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Prochains RDV</h3>
-            <button className="text-[#007BFF] hover:text-blue-700 text-sm font-medium">
-              Planning
-            </button>
-          </div>
-          <div className="space-y-4">
-            {upcomingAppointments.map((appointment) => (
-              <div key={appointment.id} className="border-l-4 border-[#007BFF] pl-4 py-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-gray-900">{appointment.patient}</p>
-                  <span className="text-xs bg-[#007BFF]/10 text-[#007BFF] px-2 py-1 rounded-full">
-                    {appointment.time}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500">{appointment.doctor} • {appointment.type}</p>
-              </div>
-            ))}
-          </div>
-          </div>
+            ))
+          )}
         </div>
       </div>
 
       {/* Quick Actions */}
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
         <h3 className="text-lg font-semibold text-gray-900 mb-6">Actions Rapides</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <button className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:border-[#007BFF] hover:bg-[#007BFF]/5 transition-all group">
+        <div className="grid grid-cols-2 gap-4">
+          <a href="/dashboard/gestion-admin" className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:border-[#007BFF] hover:bg-[#007BFF]/5 transition-all group">
             <div className="w-12 h-12 bg-[#007BFF]/10 rounded-lg flex items-center justify-center mb-3 group-hover:bg-[#007BFF]/20">
               <svg className="w-6 h-6 text-[#007BFF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-gray-700 group-hover:text-[#007BFF]">Nouveau Patient</span>
-          </button>
+            <span className="text-sm font-medium text-gray-700 group-hover:text-[#007BFF]">Créer Admin</span>
+          </a>
 
-          <button className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:border-[#007BFF] hover:bg-[#007BFF]/5 transition-all group">
+          <a href="/dashboard/gestion-doctor" className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:border-[#007BFF] hover:bg-[#007BFF]/5 transition-all group">
             <div className="w-12 h-12 bg-[#007BFF]/10 rounded-lg flex items-center justify-center mb-3 group-hover:bg-[#007BFF]/20">
               <svg className="w-6 h-6 text-[#007BFF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-gray-700 group-hover:text-[#007BFF]">Planifier RDV</span>
-          </button>
-
-          <button className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:border-[#007BFF] hover:bg-[#007BFF]/5 transition-all group">
-            <div className="w-12 h-12 bg-[#007BFF]/10 rounded-lg flex items-center justify-center mb-3 group-hover:bg-[#007BFF]/20">
-              <svg className="w-6 h-6 text-[#007BFF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <span className="text-sm font-medium text-gray-700 group-hover:text-[#007BFF]">Rapport</span>
-          </button>
-
-          <button className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:border-[#007BFF] hover:bg-[#007BFF]/5 transition-all group">
-            <div className="w-12 h-12 bg-[#007BFF]/10 rounded-lg flex items-center justify-center mb-3 group-hover:bg-[#007BFF]/20">
-              <svg className="w-6 h-6 text-[#007BFF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </div>
-            <span className="text-sm font-medium text-gray-700 group-hover:text-[#007BFF]">Paramètres</span>
-          </button>
+            <span className="text-sm font-medium text-gray-700 group-hover:text-[#007BFF]">Créer Docteur</span>
+          </a>
         </div>
       </div>
     </div>
