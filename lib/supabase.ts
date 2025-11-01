@@ -87,6 +87,7 @@ export interface Database {
           id_doctor: string
           price: number
           type: string
+          count: number
           start: string
           end_date: string
           created_at: string
@@ -97,6 +98,7 @@ export interface Database {
           id_doctor: string
           price: number
           type: string
+          count?: number
           start: string
           end_date: string
           created_at?: string
@@ -107,6 +109,7 @@ export interface Database {
           id_doctor?: string
           price?: number
           type?: string
+          count?: number
           start?: string
           end_date?: string
           created_at?: string

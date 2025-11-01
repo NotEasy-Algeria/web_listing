@@ -126,19 +126,19 @@ export class DatabaseService {
   // Recent Activities (combined feed)
   static async getRecentActivities(limit: number = 10) {
     try {
-      // Fetch doctors and abonnements
-      const [doctorsResult, abonnementsResult] = await Promise.all([
-        supabase
-          .from('doctors')
-          .select('id, first_name, last_name, field, status, created_at, updated_at')
-          .order('created_at', { ascending: false })
-          .limit(limit),
-        supabase
-          .from('abonnements')
-          .select('id, type, price, start, end_date, created_at, doctors(id, first_name, last_name)')
-          .order('created_at', { ascending: false })
-          .limit(limit)
-      ])
+      // Fetch doctors
+      const doctorsResult = await supabase
+        .from('doctors')
+        .select('id, first_name, last_name, field, status, created_at, updated_at')
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+      // Fetch abonnements separately (without join to avoid relation issues)
+      const abonnementsResult = await supabase
+        .from('abonnements')
+        .select('id, type, price, start, end_date, created_at, id_doctor')
+        .order('created_at', { ascending: false })
+        .limit(limit)
 
       const activities: Array<{ id: string; type: string; message: string; created_at: string }> = []
 
@@ -164,9 +164,24 @@ export class DatabaseService {
       // Handle abonnements results
       if (abonnementsResult.error) {
         console.error('Error fetching abonnements for activities:', abonnementsResult.error)
-      } else if (abonnementsResult.data) {
+      } else if (abonnementsResult.data && abonnementsResult.data.length > 0) {
+        // Fetch doctors for abonnements separately
+        const doctorIds = [...new Set(abonnementsResult.data.map((a: any) => a.id_doctor).filter(Boolean))]
+        
+        let doctorsMap = new Map()
+        if (doctorIds.length > 0) {
+          const { data: doctorsData, error: doctorsError } = await supabase
+            .from('doctors')
+            .select('id, first_name, last_name')
+            .in('id', doctorIds)
+          
+          if (!doctorsError && doctorsData) {
+            doctorsMap = new Map(doctorsData.map((doc: any) => [doc.id, doc]))
+          }
+        }
+        
         abonnementsResult.data.forEach((a: any) => {
-          const doctor = a.doctors
+          const doctor = doctorsMap.get(a.id_doctor)
           const doctorName = doctor && (doctor.first_name || doctor.last_name)
             ? `${doctor.first_name || ''} ${doctor.last_name || ''}`.trim()
             : 'Un docteur'
@@ -246,7 +261,7 @@ export class DatabaseService {
     }))
   }
 
-  static async createAbonnement(input: { id_doctor: string; price: number; type: string; start: string; end_date: string }) {
+  static async createAbonnement(input: { id_doctor: string; price: number; type: string; start: string; end_date: string; count?: number }) {
     const { data, error } = await supabase
       .from('abonnements')
       .insert({
@@ -254,7 +269,8 @@ export class DatabaseService {
         price: input.price,
         type: input.type,
         start: input.start,
-        end_date: input.end_date
+        end_date: input.end_date,
+        count: input.count || 1
       })
       .select('*')
       .single()

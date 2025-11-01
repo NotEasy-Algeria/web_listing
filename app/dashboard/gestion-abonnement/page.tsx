@@ -9,6 +9,7 @@ interface Abonnement {
   id_doctor: string; 
   price: number; 
   type: string; 
+  count: number;
   start: string; 
   end_date: string; 
   created_at: string;
@@ -71,14 +72,31 @@ export default function GestionAbonnementPage() {
     if (!createForDoctor) return;
     const price = parseFloat(form.price);
     if (Number.isNaN(price)) return alert("Prix invalide");
+    
+    // Validate dates
+    if (!form.start || !form.end_date) {
+      return alert("Veuillez remplir toutes les dates");
+    }
+    
+    if (new Date(form.end_date) < new Date(form.start)) {
+      return alert("La date de fin doit être supérieure ou égale à la date de début");
+    }
+    
     try {
-      // Create the abonnement
+      // Get all existing abonnements for this doctor from database to calculate count
+      const allAbonnements = await DatabaseService.getAbonnements();
+      const existingAbonnements = allAbonnements.filter(ab => ab.id_doctor === createForDoctor.id);
+      const currentCount = existingAbonnements.length;
+      const newCount = currentCount + 1;
+      
+      // Create the abonnement with calculated count
       await DatabaseService.createAbonnement({
         id_doctor: createForDoctor.id,
         type: form.type,
         price,
         start: form.start,
         end_date: form.end_date,
+        count: newCount,
       });
       
       // Update doctor status to true (active)
@@ -94,8 +112,17 @@ export default function GestionAbonnementPage() {
       
       setCreateOpen(false);
       setCreateForDoctor(null);
+      setForm({ type: "", price: "", start: "", end_date: "" });
     } catch (e: any) {
-      alert(e?.message || "Erreur lors de la création de l'abonnement");
+      let errorMessage = "Erreur lors de la création de l'abonnement";
+      if (e?.message) {
+        if (e.message.includes("abonnements_date_check")) {
+          errorMessage = "La date de fin doit être supérieure ou égale à la date de début";
+        } else {
+          errorMessage = e.message;
+        }
+      }
+      alert(errorMessage);
     }
   };
 
@@ -114,6 +141,16 @@ export default function GestionAbonnementPage() {
     if (!editAbonnement) return;
     const price = parseFloat(editForm.price);
     if (Number.isNaN(price)) return alert("Prix invalide");
+    
+    // Validate dates
+    if (!editForm.start || !editForm.end_date) {
+      return alert("Veuillez remplir toutes les dates");
+    }
+    
+    if (new Date(editForm.end_date) < new Date(editForm.start)) {
+      return alert("La date de fin doit être supérieure ou égale à la date de début");
+    }
+    
     try {
       await DatabaseService.updateAbonnement(editAbonnement.id, {
         type: editForm.type,
@@ -125,7 +162,15 @@ export default function GestionAbonnementPage() {
       setAbonnements(abos || []);
       setEditAbonnement(null);
     } catch (e: any) {
-      alert(e?.message || "Erreur lors de la mise à jour de l'abonnement");
+      let errorMessage = "Erreur lors de la mise à jour de l'abonnement";
+      if (e?.message) {
+        if (e.message.includes("abonnements_date_check")) {
+          errorMessage = "La date de fin doit être supérieure ou égale à la date de début";
+        } else {
+          errorMessage = e.message;
+        }
+      }
+      alert(errorMessage);
     }
   };
 
@@ -516,7 +561,14 @@ export default function GestionAbonnementPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Fin</label>
-                      <input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent" required />
+                      <input 
+                        type="date" 
+                        value={form.end_date} 
+                        min={form.start || new Date().toISOString().split('T')[0]}
+                        onChange={(e) => setForm({ ...form, end_date: e.target.value })} 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent" 
+                        required 
+                      />
                     </div>
                   </div>
                 </form>
@@ -653,6 +705,7 @@ export default function GestionAbonnementPage() {
                       <input 
                         type="date" 
                         value={editForm.end_date} 
+                        min={editForm.start || new Date().toISOString().split('T')[0]}
                         onChange={(e) => setEditForm({ ...editForm, end_date: e.target.value })} 
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent" 
                         required 

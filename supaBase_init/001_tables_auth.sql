@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS public.abonnements (
   id_doctor UUID NOT NULL,
   price DECIMAL(10, 2) NOT NULL CHECK (price >= 0),
   type TEXT NOT NULL,
+  count INTEGER NOT NULL DEFAULT 1 CHECK (count > 0),
   start DATE NOT NULL,
   end_date DATE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
