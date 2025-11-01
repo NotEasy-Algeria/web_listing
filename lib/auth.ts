@@ -79,7 +79,7 @@ export class AuthService {
   }
 
   // Update admin profile
-  static async updateAdminProfile(adminId: string, updates: Partial<AdminUser>) {
+  static async updateAdminProfile(adminId: string, updates: Partial<AdminUser> & { password?: string }) {
     const { data, error } = await supabase
       .from('admins')
       .update(updates)
