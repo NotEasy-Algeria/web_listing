@@ -4,48 +4,12 @@ import { Database } from './supabase'
 type Tables = Database['public']['Tables']
 
 export class DatabaseService {
-  // Users Management
-  static async getUsers() {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .order('created_at', { ascending: false })
-    
-    if (error) throw error
-    return data
-  }
-
-  static async createUser(user: Tables['users']['Insert']) {
-    const { data, error } = await supabase
-      .from('users')
-      .insert(user)
-      .select()
-      .single()
-    
-    if (error) throw error
-    return data
-  }
-
-  static async updateUser(id: string, updates: Tables['users']['Update']) {
-    const { data, error } = await supabase
-      .from('users')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-    
-    if (error) throw error
-    return data
-  }
-
-  static async deleteUser(id: string) {
-    const { error } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', id)
-    
-    if (error) throw error
-  }
+  // Note: Users table not implemented in database schema
+  // These functions are kept for future use but will fail if called
+  // static async getUsers() { ... }
+  // static async createUser() { ... }
+  // static async updateUser() { ... }
+  // static async deleteUser() { ... }
 
   // Doctors Management
   static async getDoctors() {
@@ -90,42 +54,7 @@ export class DatabaseService {
     if (error) throw error
   }
 
-  // Subscriptions Management
-  static async getSubscriptions() {
-    const { data, error } = await supabase
-      .from('subscriptions')
-      .select(`
-        *,
-        users!inner(name, email)
-      `)
-      .order('created_at', { ascending: false })
-    
-    if (error) throw error
-    return data
-  }
-
-  static async createSubscription(subscription: Tables['subscriptions']['Insert']) {
-    const { data, error } = await supabase
-      .from('subscriptions')
-      .insert(subscription)
-      .select()
-      .single()
-    
-    if (error) throw error
-    return data
-  }
-
-  static async updateSubscription(id: string, updates: Tables['subscriptions']['Update']) {
-    const { data, error } = await supabase
-      .from('subscriptions')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-    
-    if (error) throw error
-    return data
-  }
+  // Note: Subscriptions functions removed - use getAbonnements, createAbonnement, etc. instead
 
   // Admins Management
   static async getAdmins() {
@@ -170,62 +99,26 @@ export class DatabaseService {
     if (error) throw error
   }
 
-  // Appointments Management
-  static async getAppointments() {
-    const { data, error } = await supabase
-      .from('appointments')
-      .select(`
-        *,
-        users!appointments_patient_id_fkey(name, email),
-        doctors!inner(
-          *,
-          users!inner(name, email)
-        )
-      `)
-      .order('appointment_date', { ascending: true })
-    
-    if (error) throw error
-    return data
-  }
-
-  static async createAppointment(appointment: Tables['appointments']['Insert']) {
-    const { data, error } = await supabase
-      .from('appointments')
-      .insert(appointment)
-      .select()
-      .single()
-    
-    if (error) throw error
-    return data
-  }
-
-  static async updateAppointment(id: string, updates: Tables['appointments']['Update']) {
-    const { data, error } = await supabase
-      .from('appointments')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-    
-    if (error) throw error
-    return data
-  }
+  // Note: Appointments table not implemented in database schema
+  // These functions are kept for future use but will fail if called
+  // static async getAppointments() { ... }
+  // static async createAppointment() { ... }
+  // static async updateAppointment() { ... }
 
   // Statistics
   static async getDashboardStats() {
-    const [usersResult, doctorsResult, appointmentsResult, subscriptionsResult] = await Promise.all([
-      supabase.from('users').select('id', { count: 'exact' }),
+    const [doctorsResult, abonnementsResult] = await Promise.all([
       supabase.from('doctors').select('id', { count: 'exact' }),
-      supabase.from('appointments').select('id', { count: 'exact' }),
-      supabase.from('subscriptions').select('price').eq('status', 'active')
+      supabase.from('abonnements').select('price')
     ])
 
-    const totalRevenue = subscriptionsResult.data?.reduce((sum, sub) => sum + sub.price, 0) || 0
+    // Calculate total revenue from all abonnements (or only active ones if end_date is in future)
+    const today = new Date().toISOString().split('T')[0]
+    const totalRevenue = abonnementsResult.data?.reduce((sum, ab) => sum + Number(ab.price), 0) || 0
 
     return {
-      totalUsers: usersResult.count || 0,
       totalDoctors: doctorsResult.count || 0,
-      totalAppointments: appointmentsResult.count || 0,
+      totalAppointments: 0, // Not implemented yet
       totalRevenue
     }
   }
@@ -242,7 +135,7 @@ export class DatabaseService {
           .limit(limit),
         supabase
           .from('abonnements')
-          .select('id, type, price, start_date, end_date, created_at, doctors(id, first_name, last_name)')
+          .select('id, type, price, start, end_date, created_at, doctors(id, first_name, last_name)')
           .order('created_at', { ascending: false })
           .limit(limit)
       ])

@@ -9,32 +9,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 export interface Database {
   public: {
     Tables: {
-      users: {
-        Row: {
-          id: string
-          email: string
-          name: string
-          role: 'admin' | 'doctor' | 'user'
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          email: string
-          name: string
-          role?: 'admin' | 'doctor' | 'user'
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          email?: string
-          name?: string
-          role?: 'admin' | 'doctor' | 'user'
-          created_at?: string
-          updated_at?: string
-        }
-      }
+      // Note: users table not implemented - kept for reference only
+      // users: { ... }
       doctors: {
         Row: {
           id: string
@@ -70,82 +46,75 @@ export interface Database {
           updated_at?: string
         }
       }
-      subscriptions: {
+      admins: {
         Row: {
           id: string
-          user_id: string
-          plan_name: string
-          start_date: string
-          end_date: string
-          status: 'active' | 'expired' | 'cancelled' | 'pending'
-          price: number
-          auto_renew: boolean
+          first_name: string
+          last_name: string
+          email: string
+          password: string
+          status: boolean
+          phone: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
-          user_id: string
-          plan_name: string
-          start_date: string
-          end_date: string
-          status?: 'active' | 'expired' | 'cancelled' | 'pending'
-          price: number
-          auto_renew?: boolean
+          first_name: string
+          last_name: string
+          email: string
+          password: string
+          status?: boolean
+          phone?: string | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
-          user_id?: string
-          plan_name?: string
-          start_date?: string
-          end_date?: string
-          status?: 'active' | 'expired' | 'cancelled' | 'pending'
+          first_name?: string
+          last_name?: string
+          email?: string
+          password?: string
+          status?: boolean
+          phone?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      abonnements: {
+        Row: {
+          id: string
+          id_doctor: string
+          price: number
+          type: string
+          start: string
+          end_date: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          id_doctor: string
+          price: number
+          type: string
+          start: string
+          end_date: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          id_doctor?: string
           price?: number
-          auto_renew?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      appointments: {
-        Row: {
-          id: string
-          patient_id: string
-          doctor_id: string
-          appointment_date: string
-          appointment_time: string
-          type: string
-          status: 'scheduled' | 'completed' | 'cancelled'
-          notes?: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          patient_id: string
-          doctor_id: string
-          appointment_date: string
-          appointment_time: string
-          type: string
-          status?: 'scheduled' | 'completed' | 'cancelled'
-          notes?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          patient_id?: string
-          doctor_id?: string
-          appointment_date?: string
-          appointment_time?: string
           type?: string
-          status?: 'scheduled' | 'completed' | 'cancelled'
-          notes?: string
+          start?: string
+          end_date?: string
           created_at?: string
           updated_at?: string
         }
       }
+      // Note: appointments table not implemented - kept for reference only
+      // appointments: { ... }
     }
     Views: {
       [_ in never]: never
