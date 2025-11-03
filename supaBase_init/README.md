@@ -12,6 +12,8 @@ Execute these scripts in the following order in your Supabase SQL Editor:
 4. **004_realtions_auth.sql** - Foreign key relationships
 5. **005_triggers_auth.sql** - Triggers for auto-updating timestamps
 6. **006_rls.sql** - Row Level Security (RLS) policies
+7. **007_add_password_to_doctors.sql** - Adds password column to doctors table (migration) - *Optional: Can be skipped if using Supabase Auth*
+8. **008_link_doctors_to_auth.sql** - Links doctors table to Supabase Auth users (adds user_id foreign key)
 
 ## 🗄️ Database Schema
 
@@ -23,9 +25,11 @@ Execute these scripts in the following order in your Supabase SQL Editor:
 - Constraints: Email format validation, password minimum length (6 chars)
 
 #### `doctors`
-- Doctor accounts
-- Fields: id, first_name, last_name, email, field, status, phone, timestamps
+- Doctor accounts linked to Supabase Auth users
+- Fields: id, first_name, last_name, email, field, status, phone, password (deprecated), user_id, timestamps
 - Constraints: Email format validation (optional/nullable)
+- **Relationship**: `user_id` references `auth.users(id)` with CASCADE delete
+- **Note**: Password is stored in Supabase Auth, not in the doctors table. The `password` column is kept for backward compatibility but should not be used.
 
 #### `abonnements`
 - Subscription records for doctors
@@ -46,6 +50,7 @@ Execute these scripts in the following order in your Supabase SQL Editor:
 - `idx_doctors_email` - Email lookups
 - `idx_doctors_status` - Status filtering
 - `idx_doctors_created_at` - Sorting and date filtering
+- `idx_doctors_user_id` - Lookups by Supabase Auth user ID
 
 #### `abonnements`
 - `idx_abonnements_id_doctor` - Foreign key lookups
@@ -88,9 +93,10 @@ All tables have RLS enabled with policies allowing full access to authenticated 
 ## 🚀 Quick Start
 
 1. Open Supabase Dashboard → SQL Editor
-2. Execute scripts in order (001 → 006)
+2. Execute scripts in order (001 → 008)
 3. Verify tables are created: `SELECT * FROM information_schema.tables WHERE table_schema = 'public';`
 4. Verify indexes: `SELECT * FROM pg_indexes WHERE schemaname = 'public';`
+5. Verify user_id foreign key: `SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'doctors' AND column_name = 'user_id';`
 
 ## 📝 Notes
 

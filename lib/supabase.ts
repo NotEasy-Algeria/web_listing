@@ -20,6 +20,7 @@ export interface Database {
           field: string | null
           status: boolean
           phone: string | null
+          password: string | null
           created_at: string
           updated_at: string
         }
@@ -31,6 +32,7 @@ export interface Database {
           field?: string | null
           status?: boolean
           phone?: string | null
+          password?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -42,6 +44,7 @@ export interface Database {
           field?: string | null
           status?: boolean
           phone?: string | null
+          password?: string | null
           created_at?: string
           updated_at?: string
         }

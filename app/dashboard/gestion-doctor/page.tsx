@@ -12,6 +12,7 @@ interface Doctor {
   phone: string | null;
   field: string | null;
   status: boolean;
+  password?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -36,7 +37,9 @@ export default function GestionDoctorPage() {
     email: "",
     phone: "",
     field: "",
+    password: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -100,8 +103,15 @@ export default function GestionDoctorPage() {
 
     try {
       // Validate form
-      if (!formData.first_name || !formData.last_name || !formData.email) {
-        setFormError("Veuillez remplir tous les champs obligatoires (Nom, Prénom, Email)");
+      if (!formData.first_name || !formData.last_name || !formData.email || !formData.password) {
+        setFormError("Veuillez remplir tous les champs obligatoires (Nom, Prénom, Email, Mot de passe)");
+        setCreating(false);
+        return;
+      }
+
+      // Validate password length
+      if (formData.password.length < 6) {
+        setFormError("Le mot de passe doit contenir au moins 6 caractères");
         setCreating(false);
         return;
       }
@@ -114,14 +124,12 @@ export default function GestionDoctorPage() {
         return;
       }
 
-      // Generate a temporary password for the doctor (they'll need to reset it)
-      // In production, you might want to generate this server-side or send via email
-      const tempPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12) + "!@#";
-
-      // Create user in Supabase Auth - this will automatically send confirmation email
+      // Step 1: Create user in Supabase Auth
+      // This creates the authentication account and handles password securely
+      // Supabase Auth will automatically send a confirmation email
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
-        password: tempPassword,
+        password: formData.password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
@@ -146,14 +154,16 @@ export default function GestionDoctorPage() {
         throw new Error("Erreur: Aucun utilisateur créé dans Supabase Auth");
       }
 
-      // Create doctor record in database
+      // Step 2: Create doctor record in database
+      // Password is stored securely in Supabase Auth, not in the doctors table
+      // The doctor can login using their email/password via Supabase Auth
       const newDoctor = await DatabaseService.createDoctor({
         first_name: formData.first_name,
         last_name: formData.last_name,
         email: formData.email,
         phone: formData.phone || null,
         field: formData.field || null,
-        status: false, // Default to inactive/pending
+        status: false, // Default to inactive/pending until subscription is created
       });
 
       // Note: Supabase Auth automatically sends confirmation email when signUp is called
@@ -171,12 +181,14 @@ export default function GestionDoctorPage() {
         email: "",
         phone: "",
         field: "",
+        password: "",
       });
       setFormError(null);
+      setShowPassword(false);
       
       // Show success modal
       setSuccessMessage(
-        `Un email de confirmation a été envoyé à ${doctorEmail}. Le docteur devra confirmer son email avant de pouvoir se connecter.`
+        `Docteur créé avec succès ! Un compte Supabase Auth a été créé pour ${doctorEmail}. Un email de confirmation a été envoyé. Le docteur devra confirmer son email avant de pouvoir se connecter avec le mot de passe fourni.`
       );
       setShowSuccessModal(true);
     } catch (e: any) {
@@ -652,8 +664,9 @@ Rapport généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().t
                   <button
                     onClick={() => {
                       setShowAddModal(false);
-                      setFormData({ first_name: "", last_name: "", email: "", phone: "", field: "" });
+                      setFormData({ first_name: "", last_name: "", email: "", phone: "", field: "", password: "" });
                       setFormError(null);
+                      setShowPassword(false);
                     }}
                     className="text-gray-400 hover:text-gray-600"
                   >
@@ -739,6 +752,40 @@ Rapport généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().t
                       <option value="Médecine Générale">Médecine Générale</option>
                     </select>
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Mot de passe <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                        placeholder="Mot de passe (min. 6 caractères)"
+                        minLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      >
+                        {showPassword ? (
+                          <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                          </svg>
+                        ) : (
+                          <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Le mot de passe doit contenir au moins 6 caractères</p>
+                  </div>
                 </form>
               </div>
 
@@ -755,8 +802,9 @@ Rapport généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().t
                   type="button"
                   onClick={() => {
                     setShowAddModal(false);
-                    setFormData({ first_name: "", last_name: "", email: "", phone: "", field: "" });
+                    setFormData({ first_name: "", last_name: "", email: "", phone: "", field: "", password: "" });
                     setFormError(null);
+                    setShowPassword(false);
                   }}
                   className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                 >
