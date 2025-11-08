@@ -299,4 +299,55 @@ export class DatabaseService {
     
     if (error) throw error
   }
+
+  // Events Management
+  static async getEvents() {
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('start_date', { ascending: true })
+    
+    if (error) throw error
+    return data || []
+  }
+
+  // Event Registrations Management
+  static async getEventRegistrations(eventId: string) {
+    // Fetch registrations with doctor information
+    const { data: registrationsData, error: registrationsError } = await supabase
+      .from('event_registrations')
+      .select('*')
+      .eq('id_event', eventId)
+      .order('created_at', { ascending: false })
+    
+    if (registrationsError) throw registrationsError
+    
+    if (!registrationsData || registrationsData.length === 0) {
+      return []
+    }
+    
+    // Fetch doctors for all registrations
+    const doctorIds = [...new Set(registrationsData.map(reg => reg.id_doctor).filter(Boolean))]
+    
+    if (doctorIds.length === 0) {
+      return registrationsData.map(reg => ({ ...reg, doctors: null }))
+    }
+    
+    const { data: doctorsData, error: doctorsError } = await supabase
+      .from('doctors')
+      .select('id, first_name, last_name, email, phone')
+      .in('id', doctorIds)
+    
+    if (doctorsError) {
+      console.warn('Error fetching doctors:', doctorsError)
+    }
+    
+    // Map doctors to registrations
+    const doctorsMap = new Map((doctorsData || []).map(doc => [doc.id, doc]))
+    
+    return registrationsData.map(reg => ({
+      ...reg,
+      doctors: doctorsMap.get(reg.id_doctor) || null
+    }))
+  }
 }

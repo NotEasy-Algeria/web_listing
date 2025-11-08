@@ -54,6 +54,15 @@ const navigation = [
       </svg>
     ),
   },
+  {
+    name: "Événements",
+    href: "/dashboard/event",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
 ];
 
 export default function DashboardLayout({
@@ -230,6 +239,7 @@ export default function DashboardLayout({
                       {pathname === "/dashboard/gestion-abonnement" && "Gestion Abonnement"}
                       {pathname === "/dashboard/statistics" && "Statistiques"}
                       {pathname === "/dashboard/gestion-doctor" && "Gestion Docteurs"}
+                      {pathname === "/dashboard/event" && "Événements"}
                       {pathname === "/dashboard/profile" && "Mon Profil"}
                     </h1>
                     <p className="text-sm text-gray-500 font-medium">
@@ -238,6 +248,7 @@ export default function DashboardLayout({
                       {pathname === "/dashboard/gestion-abonnement" && "Gérez les abonnements"}
                       {pathname === "/dashboard/statistics" && "Analysez les performances"}
                       {pathname === "/dashboard/gestion-doctor" && "Gérez les docteurs"}
+                      {pathname === "/dashboard/event" && "Gérez les événements et inscriptions"}
                       {pathname === "/dashboard/profile" && "Informations personnelles"}
                     </p>
                   </div>

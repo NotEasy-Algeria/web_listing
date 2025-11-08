@@ -121,6 +121,61 @@ export interface Database {
       }
       // Note: appointments table not implemented - kept for reference only
       // appointments: { ... }
+      events: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          start_date: string
+          end_date: string | null
+          location: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          start_date: string
+          end_date?: string | null
+          location?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          start_date?: string
+          end_date?: string | null
+          location?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      event_registrations: {
+        Row: {
+          id: string
+          id_doctor: string
+          id_event: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          id_doctor: string
+          id_event: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          id_doctor?: string
+          id_event?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
