@@ -64,3 +64,29 @@ CREATE INDEX IF NOT EXISTS idx_abonnements_end_date ON public.abonnements(end_da
 CREATE INDEX IF NOT EXISTS idx_abonnements_created_at ON public.abonnements(created_at);
 CREATE INDEX IF NOT EXISTS idx_abonnements_type ON public.abonnements(type);
 
+-- Types table for Doctor App
+CREATE TABLE IF NOT EXISTS public.fileds (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Index for name lookups
+CREATE INDEX IF NOT EXISTS idx_fileds_name ON public.fileds (name);
+
+-- Sub_type table for Doctor App
+CREATE TABLE IF NOT EXISTS public.sub_type (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  price DECIMAL(10, 2) NOT NULL CHECK (price >= 0),
+  duration INTEGER NOT NULL CHECK (duration > 0),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for sub_type table for better query performance
+CREATE INDEX IF NOT EXISTS idx_sub_type_name ON public.sub_type (name);
+CREATE INDEX IF NOT EXISTS idx_sub_type_price ON public.sub_type (price);
+CREATE INDEX IF NOT EXISTS idx_sub_type_duration ON public.sub_type (duration);
+

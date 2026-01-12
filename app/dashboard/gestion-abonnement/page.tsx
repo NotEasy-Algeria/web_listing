@@ -20,13 +20,22 @@ interface Abonnement {
     email?: string;
   };
 }
+interface SubType {
+  id: string;
+  name: string;
+  price: number;
+  duration: number;
+  created_at: string;
+  updated_at: string;
+}
 
 export default function GestionAbonnementPage() {
   const [pendingDoctors, setPendingDoctors] = useState<Doctor[]>([]);
   const [abonnements, setAbonnements] = useState<Abonnement[]>([]);
+  const [subTypes, setSubTypes] = useState<SubType[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [createForDoctor, setCreateForDoctor] = useState<Doctor | null>(null);
-  const [form, setForm] = useState({ type: "", price: "", start: "", end_date: "" });
+  const [form, setForm] = useState({ type: "", price: "", start: "", end_date: "", selectedSubTypeId: "" });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [viewAbonnement, setViewAbonnement] = useState<Abonnement | null>(null);
@@ -34,6 +43,10 @@ export default function GestionAbonnementPage() {
   const [editForm, setEditForm] = useState({ type: "", price: "", start: "", end_date: "" });
   const [deleteAbonnement, setDeleteAbonnement] = useState<Abonnement | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showCreateSubTypeModal, setShowCreateSubTypeModal] = useState(false);
+  const [subTypeForm, setSubTypeForm] = useState({ name: "", price: "", start: "", end: "" });
+  const [creatingSubType, setCreatingSubType] = useState(false);
+  const [calculatedDuration, setCalculatedDuration] = useState<number | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -41,14 +54,17 @@ export default function GestionAbonnementPage() {
         setError(null);
         setLoading(true);
         console.log('Loading data from Supabase...');
-        const [docs, abos] = await Promise.all([
+        const [docs, abos, subTypesData] = await Promise.all([
           DatabaseService.getPendingDoctors(),
           DatabaseService.getAbonnements(),
+          DatabaseService.getSubTypes(),
         ]);
         console.log('Pending doctors:', docs);
         console.log('Abonnements:', abos);
+        console.log('Sub types:', subTypesData);
         setPendingDoctors(docs || []);
         setAbonnements(abos || []);
+        setSubTypes(subTypesData || []);
       } catch (e: any) {
         console.error('Error loading data:', e);
         setError(e?.message || "Erreur de chargement des données");
@@ -63,8 +79,106 @@ export default function GestionAbonnementPage() {
     setCreateForDoctor(doctor);
     // Set start date to today automatically
     const today = new Date().toISOString().split('T')[0];
-    setForm({ type: "", price: "", start: today, end_date: "" });
+    setForm({ type: "", price: "", start: today, end_date: "", selectedSubTypeId: "" });
     setCreateOpen(true);
+  };
+
+  const handleSubTypeSelect = (subTypeId: string) => {
+    const selectedSubType = subTypes.find(st => st.id === subTypeId);
+    if (selectedSubType) {
+      const today = new Date(form.start || new Date().toISOString().split('T')[0]);
+      const endDate = new Date(today);
+      endDate.setDate(endDate.getDate() + selectedSubType.duration);
+      
+      setForm({
+        ...form,
+        selectedSubTypeId: subTypeId,
+        type: selectedSubType.name,
+        price: selectedSubType.price.toString(),
+        end_date: endDate.toISOString().split('T')[0],
+      });
+    }
+  };
+
+  const calculateDurationFromDates = (start: string, end: string): number | null => {
+    if (!start || !end) return null;
+    
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    
+    if (endDate < startDate) return null;
+    
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays > 0 ? diffDays : null;
+  };
+
+  const handleSubTypeFormChange = (field: string, value: string) => {
+    const newForm = { ...subTypeForm, [field]: value };
+    setSubTypeForm(newForm);
+    
+    // Calculate duration if both dates are present
+    if (field === 'start' || field === 'end') {
+      const duration = calculateDurationFromDates(
+        field === 'start' ? value : newForm.start,
+        field === 'end' ? value : newForm.end
+      );
+      setCalculatedDuration(duration);
+    }
+  };
+
+  const handleCreateSubType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingSubType(true);
+    
+    try {
+      const price = parseFloat(subTypeForm.price);
+      
+      if (Number.isNaN(price) || price < 0) {
+        alert("Prix invalide");
+        setCreatingSubType(false);
+        return;
+      }
+      
+      if (!subTypeForm.name.trim()) {
+        alert("Le nom est requis");
+        setCreatingSubType(false);
+        return;
+      }
+      
+      if (!subTypeForm.start || !subTypeForm.end) {
+        alert("Veuillez remplir les dates de début et de fin");
+        setCreatingSubType(false);
+        return;
+      }
+      
+      const duration = calculateDurationFromDates(subTypeForm.start, subTypeForm.end);
+      
+      if (!duration || duration <= 0) {
+        alert("La date de fin doit être supérieure à la date de début");
+        setCreatingSubType(false);
+        return;
+      }
+      
+      await DatabaseService.createSubType({
+        name: subTypeForm.name.trim(),
+        price,
+        duration,
+      });
+      
+      // Reload sub types
+      const subTypesData = await DatabaseService.getSubTypes();
+      setSubTypes(subTypesData || []);
+      
+      setShowCreateSubTypeModal(false);
+      setSubTypeForm({ name: "", price: "", start: "", end: "" });
+      setCalculatedDuration(null);
+    } catch (e: any) {
+      alert(e?.message || "Erreur lors de la création du plan");
+    } finally {
+      setCreatingSubType(false);
+    }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -112,7 +226,7 @@ export default function GestionAbonnementPage() {
       
       setCreateOpen(false);
       setCreateForDoctor(null);
-      setForm({ type: "", price: "", start: "", end_date: "" });
+      setForm({ type: "", price: "", start: "", end_date: "", selectedSubTypeId: "" });
     } catch (e: any) {
       let errorMessage = "Erreur lors de la création de l'abonnement";
       if (e?.message) {
@@ -249,7 +363,10 @@ export default function GestionAbonnementPage() {
           <h1 className="text-2xl font-bold text-gray-900">Gestion des Abonnements</h1>
           <p className="text-gray-600 mt-1">Gérez les abonnements et les plans de vos utilisateurs</p>
         </div>
-        <button className="bg-[#007BFF] text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
+        <button 
+          onClick={() => setShowCreateSubTypeModal(true)}
+          className="bg-[#007BFF] text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+        >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
@@ -547,11 +664,34 @@ export default function GestionAbonnementPage() {
                 <form onSubmit={handleCreate} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                    <input type="text" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent" placeholder="Ex: Premium" required />
+                    <select
+                      value={form.selectedSubTypeId}
+                      onChange={(e) => handleSubTypeSelect(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                      required
+                    >
+                      <option value="">Sélectionner un plan</option>
+                      {subTypes.map((subType) => (
+                        <option key={subType.id} value={subType.id}>
+                          {subType.name} - {subType.price} DA ({subType.duration} jours)
+                        </option>
+                      ))}
+                    </select>
+                    {form.type && (
+                      <p className="text-xs text-gray-500 mt-1">Plan sélectionné: {form.type}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Prix (DA)</label>
-                    <input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent" placeholder="0.00" required />
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      value={form.price} 
+                      onChange={(e) => setForm({ ...form, price: e.target.value })} 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent" 
+                      placeholder="0.00" 
+                      required 
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -780,6 +920,120 @@ export default function GestionAbonnementPage() {
                   type="button" 
                   onClick={() => setDeleteAbonnement(null)} 
                   className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Sub Type Modal */}
+      {showCreateSubTypeModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity z-40" onClick={() => setShowCreateSubTypeModal(false)}>
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <div className="relative z-50 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-white px-6 pt-6 pb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">Nouveau Plan d'Abonnement</h3>
+                  <button
+                    onClick={() => {
+                      setShowCreateSubTypeModal(false);
+                      setSubTypeForm({ name: "", price: "", start: "", end: "" });
+                      setCalculatedDuration(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <form onSubmit={handleCreateSubType} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nom du Plan</label>
+                    <input
+                      type="text"
+                      value={subTypeForm.name}
+                      onChange={(e) => setSubTypeForm({ ...subTypeForm, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                      placeholder="Ex: Plan Premium"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Prix (DA)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={subTypeForm.price}
+                      onChange={(e) => setSubTypeForm({ ...subTypeForm, price: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                      placeholder="0.00"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Début</label>
+                      <input
+                        type="date"
+                        value={subTypeForm.start}
+                        onChange={(e) => handleSubTypeFormChange('start', e.target.value)}
+                        max={subTypeForm.end || undefined}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Fin</label>
+                      <input
+                        type="date"
+                        value={subTypeForm.end}
+                        onChange={(e) => handleSubTypeFormChange('end', e.target.value)}
+                        min={subTypeForm.start || undefined}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                        required
+                      />
+                    </div>
+                  </div>
+                  {calculatedDuration !== null && calculatedDuration > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-blue-900">Durée calculée:</span>
+                        <span className="text-sm font-bold text-blue-700">{calculatedDuration} jour{calculatedDuration > 1 ? 's' : ''}</span>
+                      </div>
+                    </div>
+                  )}
+                  {calculatedDuration !== null && calculatedDuration <= 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <p className="text-sm text-red-700">La date de fin doit être supérieure à la date de début</p>
+                    </div>
+                  )}
+                </form>
+              </div>
+              <div className="bg-gray-50 px-6 py-4 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={handleCreateSubType}
+                  disabled={creatingSubType}
+                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-[#007BFF] text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#007BFF] disabled:opacity-50 disabled:cursor-not-allowed sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  {creatingSubType ? "Création..." : "Créer"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateSubTypeModal(false);
+                    setSubTypeForm({ name: "", price: "", start: "", end: "" });
+                    setCalculatedDuration(null);
+                  }}
+                  className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Annuler
                 </button>

@@ -18,3 +18,17 @@ CREATE TRIGGER update_abonnements_updated_at
 BEFORE UPDATE ON public.abonnements
 FOR EACH ROW
 EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Trigger to auto-update updated_at on sub_type
+DROP TRIGGER IF EXISTS update_sub_type_updated_at ON public.sub_type;
+CREATE TRIGGER update_sub_type_updated_at
+BEFORE UPDATE ON public.sub_type
+FOR EACH ROW
+EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Trigger to auto-update updated_at on fileds
+DROP TRIGGER IF EXISTS update_fileds_updated_at ON public.fileds;
+CREATE TRIGGER update_fileds_updated_at
+BEFORE UPDATE ON public.fileds
+FOR EACH ROW
+EXECUTE FUNCTION public.update_updated_at_column();

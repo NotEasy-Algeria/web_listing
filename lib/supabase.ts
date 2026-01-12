@@ -119,6 +119,52 @@ export interface Database {
           updated_at?: string
         }
       }
+      sub_type: {
+        Row: {
+          id: string
+          name: string
+          price: number
+          duration: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          price: number
+          duration: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          price?: number
+          duration?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      fileds: {
+        Row: {
+          id: string
+          name: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
       // Note: appointments table not implemented - kept for reference only
       // appointments: { ... }
       events: {

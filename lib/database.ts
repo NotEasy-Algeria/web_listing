@@ -300,6 +300,102 @@ export class DatabaseService {
     if (error) throw error
   }
 
+  // Sub_type Management
+  static async getSubTypes() {
+    const { data, error } = await supabase
+      .from('sub_type')
+      .select('*')
+      .order('name', { ascending: true })
+    
+    if (error) throw error
+    return data || []
+  }
+
+  static async createSubType(subType: Tables['sub_type']['Insert']) {
+    const { data, error } = await supabase
+      .from('sub_type')
+      .insert(subType)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  }
+
+  static async updateSubType(id: string, updates: Tables['sub_type']['Update']) {
+    const { data, error } = await supabase
+      .from('sub_type')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  }
+
+  static async deleteSubType(id: string) {
+    const { error } = await supabase
+      .from('sub_type')
+      .delete()
+      .eq('id', id)
+    
+    if (error) throw error
+  }
+
+  // Fileds Management
+  static async getFileds() {
+    const { data, error } = await supabase
+      .from('fileds')
+      .select('*')
+      .order('name', { ascending: true })
+    
+    if (error) throw error
+    return data || []
+  }
+
+  static async createFiled(filed: Tables['fileds']['Insert']) {
+    const { data, error } = await supabase
+      .from('fileds')
+      .insert(filed)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  }
+
+  static async createFiledsBulk(fileds: Tables['fileds']['Insert'][]) {
+    const { data, error } = await supabase
+      .from('fileds')
+      .insert(fileds)
+      .select()
+    
+    if (error) throw error
+    return data || []
+  }
+
+  static async updateFiled(id: string, updates: Tables['fileds']['Update']) {
+    const { data, error } = await supabase
+      .from('fileds')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  }
+
+  static async deleteFiled(id: string) {
+    const { error } = await supabase
+      .from('fileds')
+      .delete()
+      .eq('id', id)
+    
+    if (error) throw error
+  }
+
   // Events Management
   static async getEvents() {
     const { data, error } = await supabase

@@ -110,6 +110,78 @@ FOR DELETE
 TO authenticated
 USING (true);
 
+-- Enable RLS on sub_type
+ALTER TABLE IF EXISTS public.sub_type ENABLE ROW LEVEL SECURITY;
+
+-- Policy: allow authenticated users to read sub_type
+DROP POLICY IF EXISTS sub_type_read_auth ON public.sub_type;
+CREATE POLICY sub_type_read_auth
+ON public.sub_type
+FOR SELECT
+TO authenticated
+USING (true);
+
+-- Policy: allow authenticated users to insert sub_type
+DROP POLICY IF EXISTS sub_type_insert_auth ON public.sub_type;
+CREATE POLICY sub_type_insert_auth
+ON public.sub_type
+FOR INSERT
+TO authenticated
+WITH CHECK (true);
+
+-- Policy: allow authenticated users to update sub_type
+DROP POLICY IF EXISTS sub_type_update_auth ON public.sub_type;
+CREATE POLICY sub_type_update_auth
+ON public.sub_type
+FOR UPDATE
+TO authenticated
+USING (true)
+WITH CHECK (true);
+
+-- Policy: allow authenticated users to delete sub_type
+DROP POLICY IF EXISTS sub_type_delete_auth ON public.sub_type;
+CREATE POLICY sub_type_delete_auth
+ON public.sub_type
+FOR DELETE
+TO authenticated
+USING (true);
+
+-- Enable RLS on fileds
+ALTER TABLE IF EXISTS public.fileds ENABLE ROW LEVEL SECURITY;
+
+-- Policy: allow authenticated users to read fileds
+DROP POLICY IF EXISTS fileds_read_auth ON public.fileds;
+CREATE POLICY fileds_read_auth
+ON public.fileds
+FOR SELECT
+TO authenticated
+USING (true);
+
+-- Policy: allow authenticated users to insert fileds
+DROP POLICY IF EXISTS fileds_insert_auth ON public.fileds;
+CREATE POLICY fileds_insert_auth
+ON public.fileds
+FOR INSERT
+TO authenticated
+WITH CHECK (true);
+
+-- Policy: allow authenticated users to update fileds
+DROP POLICY IF EXISTS fileds_update_auth ON public.fileds;
+CREATE POLICY fileds_update_auth
+ON public.fileds
+FOR UPDATE
+TO authenticated
+USING (true)
+WITH CHECK (true);
+
+-- Policy: allow authenticated users to delete fileds
+DROP POLICY IF EXISTS fileds_delete_auth ON public.fileds;
+CREATE POLICY fileds_delete_auth
+ON public.fileds
+FOR DELETE
+TO authenticated
+USING (true);
+
 -- ⚠️ RECOMMENDATION: For better security, consider implementing:
 -- 1. Role-based access control (admin-only policies)
 -- 2. Service role key for admin operations instead of anon key

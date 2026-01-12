@@ -42,6 +42,12 @@ export default function GestionDoctorPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  
+  // Fields (fileds) state
+  const [showAddFieldsModal, setShowAddFieldsModal] = useState(false);
+  const [fieldsList, setFieldsList] = useState<string[]>([""]);
+  const [creatingFields, setCreatingFields] = useState(false);
+  const [fieldsError, setFieldsError] = useState<string | null>(null);
 
   // Load doctors from Supabase
   useEffect(() => {
@@ -208,6 +214,65 @@ export default function GestionDoctorPage() {
         console.error('Error deleting doctor:', e);
         alert("Erreur lors de la suppression: " + (e?.message || "Erreur inconnue"));
       }
+    }
+  };
+
+  // Handle adding new field input
+  const handleAddFieldInput = () => {
+    setFieldsList([...fieldsList, ""]);
+  };
+
+  // Handle removing field input
+  const handleRemoveFieldInput = (index: number) => {
+    if (fieldsList.length > 1) {
+      const newList = fieldsList.filter((_, i) => i !== index);
+      setFieldsList(newList);
+    }
+  };
+
+  // Handle field input change
+  const handleFieldInputChange = (index: number, value: string) => {
+    const newList = [...fieldsList];
+    newList[index] = value;
+    setFieldsList(newList);
+  };
+
+  // Handle bulk create fields
+  const handleCreateFields = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFieldsError(null);
+    setCreatingFields(true);
+
+    try {
+      // Filter out empty fields and trim whitespace
+      const fieldsToCreate = fieldsList
+        .map(field => field.trim())
+        .filter(field => field.length > 0);
+
+      if (fieldsToCreate.length === 0) {
+        setFieldsError("Veuillez saisir au moins un domaine");
+        setCreatingFields(false);
+        return;
+      }
+
+      // Create bulk insert array
+      const fieldsData = fieldsToCreate.map(name => ({ name }));
+
+      // Use bulk create function
+      await DatabaseService.createFiledsBulk(fieldsData);
+
+      // Reset form
+      setFieldsList([""]);
+      setShowAddFieldsModal(false);
+      setFieldsError(null);
+      
+      // Show success message
+      alert(`${fieldsToCreate.length} domaine(s) ajouté(s) avec succès !`);
+    } catch (e: any) {
+      console.error('Error creating fields:', e);
+      setFieldsError(e?.message || "Erreur lors de l'ajout des domaines");
+    } finally {
+      setCreatingFields(false);
     }
   };
 
@@ -403,15 +468,26 @@ Rapport généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().t
           <h1 className="text-2xl font-bold text-gray-900">Gestion des Docteurs</h1>
           <p className="text-gray-600 mt-1">Gérez les comptes docteurs et leurs informations professionnelles</p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-[#007BFF] text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          <span>Nouveau Docteur</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setShowAddFieldsModal(true)}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <span>Ajouter Domaines</span>
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-[#007BFF] text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <span>Nouveau Docteur</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -857,6 +933,112 @@ Rapport généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().t
                   className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-[#007BFF] text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#007BFF] sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   OK
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Fields Modal */}
+      {showAddFieldsModal && (
+        <div className="fixed inset-0 z-[9999] overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity bg-gray-500 opacity-75 z-[9998]" onClick={() => {
+              setShowAddFieldsModal(false);
+              setFieldsList([""]);
+              setFieldsError(null);
+            }}></div>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full relative z-[9999]">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">Ajouter des Domaines</h3>
+                  <button
+                    onClick={() => {
+                      setShowAddFieldsModal(false);
+                      setFieldsList([""]);
+                      setFieldsError(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {fieldsError && (
+                  <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-sm text-red-800">{fieldsError}</p>
+                  </div>
+                )}
+
+                <form onSubmit={handleCreateFields} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Domaines médicaux <span className="text-red-500">*</span>
+                    </label>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Vous pouvez ajouter plusieurs domaines à la fois. Cliquez sur "+" pour ajouter un autre champ.
+                    </p>
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {fieldsList.map((field, index) => (
+                        <div key={index} className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            value={field}
+                            onChange={(e) => handleFieldInputChange(index, e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                            placeholder={`Domaine ${index + 1} (ex: Cardiologie)`}
+                          />
+                          {fieldsList.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveFieldInput(index)}
+                              className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Supprimer ce champ"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddFieldInput}
+                      className="mt-2 flex items-center space-x-2 text-green-600 hover:text-green-700 font-medium text-sm"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      <span>Ajouter un autre domaine</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={handleCreateFields}
+                  disabled={creatingFields || fieldsList.every(f => !f.trim())}
+                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  {creatingFields ? "Ajout..." : `Ajouter ${fieldsList.filter(f => f.trim()).length} domaine(s)`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddFieldsModal(false);
+                    setFieldsList([""]);
+                    setFieldsError(null);
+                  }}
+                  className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Annuler
                 </button>
               </div>
             </div>

@@ -6,7 +6,7 @@ This folder contains SQL scripts to initialize and configure the Supabase databa
 
 Execute these scripts in the following order in your Supabase SQL Editor:
 
-1. **001_tables_auth.sql** - Creates all tables (admins, doctors, abonnements)
+1. **001_tables_auth.sql** - Creates all tables (admins, doctors, abonnements, fileds, sub_type)
 2. **002_buckets.sql** - Storage buckets configuration (currently empty)
 3. **003_functions_auth.sql** - Database functions (updated_at trigger)
 4. **004_realtions_auth.sql** - Foreign key relationships
@@ -33,11 +33,27 @@ Execute these scripts in the following order in your Supabase SQL Editor:
 
 #### `abonnements`
 - Subscription records for doctors
-- Fields: id, id_doctor, price, type, start, end_date, timestamps
+- Fields: id, id_doctor, price, type, count, start, end_date, timestamps
 - Constraints: 
   - Price >= 0
   - end_date >= start_date
+  - count > 0
   - Foreign key to doctors table with CASCADE delete
+
+#### `fileds`
+- Medical fields/domains catalog
+- Fields: id, name, timestamps
+- Used for: Storing available medical fields/domains that can be assigned to doctors
+- **Note**: This table stores the list of available medical fields (e.g., "Cardiologie", "Pédiatrie", etc.)
+
+#### `sub_type`
+- Subscription plan types (predefined subscription plans)
+- Fields: id, name, price, duration, timestamps
+- Constraints:
+  - Price >= 0
+  - duration > 0 (duration in days)
+- Used for: Storing predefined subscription plans that can be selected when creating abonnements
+- **Note**: Duration is calculated from start and end dates in the UI, but stored as days in the database
 
 ## 📊 Indexes
 
@@ -58,6 +74,14 @@ Execute these scripts in the following order in your Supabase SQL Editor:
 - `idx_abonnements_created_at` - Date-based queries and statistics
 - `idx_abonnements_type` - Filtering by subscription type
 
+#### `fileds`
+- `idx_fileds_name` - Name lookups and searching
+
+#### `sub_type`
+- `idx_sub_type_name` - Name lookups
+- `idx_sub_type_price` - Price filtering and sorting
+- `idx_sub_type_duration` - Duration filtering
+
 ## 🔒 Security
 
 ### Row Level Security (RLS)
@@ -73,22 +97,33 @@ All tables have RLS enabled with policies allowing full access to authenticated 
 
 ### Added in Latest Update:
 
-1. **Data Validation Constraints**:
+1. **New Tables**:
+   - `fileds` - Medical fields/domains catalog for doctor specialties
+   - `sub_type` - Predefined subscription plan types with price and duration
+
+2. **Data Validation Constraints**:
    - Email format validation for admins and doctors
    - Password minimum length check for admins
-   - Price validation (>= 0) for abonnements
+   - Price validation (>= 0) for abonnements and sub_type
    - Date validation (end_date >= start_date) for abonnements
+   - Duration validation (duration > 0) for sub_type
+   - Count validation (count > 0) for abonnements
 
-2. **Performance Indexes**:
+3. **Performance Indexes**:
    - `idx_abonnements_end_date` - Critical for filtering active/expired subscriptions
    - `idx_abonnements_created_at` - Essential for statistics and date-based queries
    - `idx_abonnements_type` - For filtering by subscription type
    - `idx_doctors_created_at` - For sorting and date filtering
+   - `idx_fileds_name` - For field name lookups
+   - `idx_sub_type_name` - For subscription plan name lookups
+   - `idx_sub_type_price` - For price-based filtering
+   - `idx_sub_type_duration` - For duration-based filtering
 
-3. **Code Organization**:
+4. **Code Organization**:
    - Moved `idx_abonnements_id_doctor` index creation to 001_tables_auth.sql
    - Added comments for better documentation
    - Security recommendations added
+   - RLS policies and triggers added for new tables (fileds, sub_type)
 
 ## 🚀 Quick Start
 
