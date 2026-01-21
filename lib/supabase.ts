@@ -175,6 +175,7 @@ export interface Database {
           start_date: string
           end_date: string | null
           location: string | null
+          image: string | null
           created_at: string
           updated_at: string
         }
@@ -185,6 +186,7 @@ export interface Database {
           start_date: string
           end_date?: string | null
           location?: string | null
+          image?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -195,6 +197,7 @@ export interface Database {
           start_date?: string
           end_date?: string | null
           location?: string | null
+          image?: string | null
           created_at?: string
           updated_at?: string
         }

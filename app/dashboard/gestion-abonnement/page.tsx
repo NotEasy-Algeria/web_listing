@@ -35,7 +35,7 @@ export default function GestionAbonnementPage() {
   const [subTypes, setSubTypes] = useState<SubType[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [createForDoctor, setCreateForDoctor] = useState<Doctor | null>(null);
-  const [form, setForm] = useState({ type: "", price: "", start: "", end_date: "", selectedSubTypeId: "" });
+  const [form, setForm] = useState({ type: "", price: "", start: "", end_date: "", selectedSubTypeId: "", months: "" });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [viewAbonnement, setViewAbonnement] = useState<Abonnement | null>(null);
@@ -44,9 +44,16 @@ export default function GestionAbonnementPage() {
   const [deleteAbonnement, setDeleteAbonnement] = useState<Abonnement | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateSubTypeModal, setShowCreateSubTypeModal] = useState(false);
-  const [subTypeForm, setSubTypeForm] = useState({ name: "", price: "", start: "", end: "" });
+  const [subTypeForm, setSubTypeForm] = useState({ name: "", price: "", months: "" });
   const [creatingSubType, setCreatingSubType] = useState(false);
-  const [calculatedDuration, setCalculatedDuration] = useState<number | null>(null);
+  
+  // Subscription types management section
+  const [subTypesSectionOpen, setSubTypesSectionOpen] = useState(false);
+  const [loadingSubTypes, setLoadingSubTypes] = useState(false);
+  const [editingSubType, setEditingSubType] = useState<SubType | null>(null);
+  const [editSubTypeForm, setEditSubTypeForm] = useState({ name: "", price: "", duration: "" });
+  const [updatingSubType, setUpdatingSubType] = useState(false);
+  const [deletingSubType, setDeletingSubType] = useState<SubType | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -79,8 +86,25 @@ export default function GestionAbonnementPage() {
     setCreateForDoctor(doctor);
     // Set start date to today automatically
     const today = new Date().toISOString().split('T')[0];
-    setForm({ type: "", price: "", start: today, end_date: "", selectedSubTypeId: "" });
+    setForm({ type: "", price: "", start: today, end_date: "", selectedSubTypeId: "", months: "" });
     setCreateOpen(true);
+  };
+
+  const handleMonthsChange = (months: string) => {
+    const monthsNum = parseInt(months);
+    if (!Number.isNaN(monthsNum) && monthsNum > 0) {
+      const today = new Date(form.start || new Date().toISOString().split('T')[0]);
+      const endDate = new Date(today);
+      endDate.setMonth(endDate.getMonth() + monthsNum);
+      
+      setForm({
+        ...form,
+        months: months,
+        end_date: endDate.toISOString().split('T')[0],
+      });
+    } else {
+      setForm({ ...form, months: months, end_date: "" });
+    }
   };
 
   const handleSubTypeSelect = (subTypeId: string) => {
@@ -90,42 +114,27 @@ export default function GestionAbonnementPage() {
       const endDate = new Date(today);
       endDate.setDate(endDate.getDate() + selectedSubType.duration);
       
+      // Calculate months from duration (duration is in days, convert to months)
+      const months = Math.round(selectedSubType.duration / 30);
+      
       setForm({
         ...form,
         selectedSubTypeId: subTypeId,
         type: selectedSubType.name,
         price: selectedSubType.price.toString(),
         end_date: endDate.toISOString().split('T')[0],
+        months: months.toString(),
       });
     }
   };
 
-  const calculateDurationFromDates = (start: string, end: string): number | null => {
-    if (!start || !end) return null;
-    
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    
-    if (endDate < startDate) return null;
-    
-    const diffTime = endDate.getTime() - startDate.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    return diffDays > 0 ? diffDays : null;
+  const calculateDurationFromMonths = (months: number): number => {
+    // Calculate duration in days based on months (average 30 days per month)
+    return months * 30;
   };
 
   const handleSubTypeFormChange = (field: string, value: string) => {
-    const newForm = { ...subTypeForm, [field]: value };
-    setSubTypeForm(newForm);
-    
-    // Calculate duration if both dates are present
-    if (field === 'start' || field === 'end') {
-      const duration = calculateDurationFromDates(
-        field === 'start' ? value : newForm.start,
-        field === 'end' ? value : newForm.end
-      );
-      setCalculatedDuration(duration);
-    }
+    setSubTypeForm({ ...subTypeForm, [field]: value });
   };
 
   const handleCreateSubType = async (e: React.FormEvent) => {
@@ -134,6 +143,7 @@ export default function GestionAbonnementPage() {
     
     try {
       const price = parseFloat(subTypeForm.price);
+      const months = parseInt(subTypeForm.months);
       
       if (Number.isNaN(price) || price < 0) {
         alert("Prix invalide");
@@ -147,19 +157,13 @@ export default function GestionAbonnementPage() {
         return;
       }
       
-      if (!subTypeForm.start || !subTypeForm.end) {
-        alert("Veuillez remplir les dates de début et de fin");
+      if (Number.isNaN(months) || months <= 0) {
+        alert("Veuillez sélectionner une durée en mois (minimum 1 mois)");
         setCreatingSubType(false);
         return;
       }
       
-      const duration = calculateDurationFromDates(subTypeForm.start, subTypeForm.end);
-      
-      if (!duration || duration <= 0) {
-        alert("La date de fin doit être supérieure à la date de début");
-        setCreatingSubType(false);
-        return;
-      }
+      const duration = calculateDurationFromMonths(months);
       
       await DatabaseService.createSubType({
         name: subTypeForm.name.trim(),
@@ -172,12 +176,83 @@ export default function GestionAbonnementPage() {
       setSubTypes(subTypesData || []);
       
       setShowCreateSubTypeModal(false);
-      setSubTypeForm({ name: "", price: "", start: "", end: "" });
-      setCalculatedDuration(null);
+      setSubTypeForm({ name: "", price: "", months: "" });
     } catch (e: any) {
       alert(e?.message || "Erreur lors de la création du plan");
     } finally {
       setCreatingSubType(false);
+    }
+  };
+
+  // Handle edit subscription type
+  const handleEditSubType = (subType: SubType) => {
+    setEditingSubType(subType);
+    setEditSubTypeForm({
+      name: subType.name,
+      price: subType.price.toString(),
+      duration: subType.duration.toString(),
+    });
+  };
+
+  // Handle update subscription type
+  const handleUpdateSubType = async () => {
+    if (!editingSubType || !editSubTypeForm.name.trim()) {
+      alert("Le nom du plan ne peut pas être vide");
+      return;
+    }
+
+    const price = parseFloat(editSubTypeForm.price);
+    const duration = parseInt(editSubTypeForm.duration);
+
+    if (Number.isNaN(price) || price < 0) {
+      alert("Prix invalide");
+      return;
+    }
+
+    if (Number.isNaN(duration) || duration <= 0) {
+      alert("La durée doit être supérieure à 0");
+      return;
+    }
+
+    setUpdatingSubType(true);
+    try {
+      await DatabaseService.updateSubType(editingSubType.id, {
+        name: editSubTypeForm.name.trim(),
+        price,
+        duration,
+      });
+      
+      // Reload sub types
+      const subTypesData = await DatabaseService.getSubTypes();
+      setSubTypes(subTypesData || []);
+      
+      setEditingSubType(null);
+      setEditSubTypeForm({ name: "", price: "", duration: "" });
+      alert("Plan d'abonnement mis à jour avec succès !");
+    } catch (e: any) {
+      console.error('Error updating subscription type:', e);
+      alert(e?.message || "Erreur lors de la mise à jour du plan");
+    } finally {
+      setUpdatingSubType(false);
+    }
+  };
+
+  // Handle delete subscription type
+  const handleDeleteSubType = async () => {
+    if (!deletingSubType) return;
+
+    try {
+      await DatabaseService.deleteSubType(deletingSubType.id);
+      
+      // Reload sub types
+      const subTypesData = await DatabaseService.getSubTypes();
+      setSubTypes(subTypesData || []);
+      
+      setDeletingSubType(null);
+      alert("Plan d'abonnement supprimé avec succès !");
+    } catch (e: any) {
+      console.error('Error deleting subscription type:', e);
+      alert(e?.message || "Erreur lors de la suppression du plan");
     }
   };
 
@@ -187,9 +262,14 @@ export default function GestionAbonnementPage() {
     const price = parseFloat(form.price);
     if (Number.isNaN(price)) return alert("Prix invalide");
     
-    // Validate dates
+    // Validate months
+    if (!form.months || parseInt(form.months) <= 0) {
+      return alert("Veuillez sélectionner une durée en mois");
+    }
+    
+    // Validate dates (end_date should be calculated from months)
     if (!form.start || !form.end_date) {
-      return alert("Veuillez remplir toutes les dates");
+      return alert("Veuillez sélectionner une durée en mois");
     }
     
     if (new Date(form.end_date) < new Date(form.start)) {
@@ -226,7 +306,7 @@ export default function GestionAbonnementPage() {
       
       setCreateOpen(false);
       setCreateForDoctor(null);
-      setForm({ type: "", price: "", start: "", end_date: "", selectedSubTypeId: "" });
+      setForm({ type: "", price: "", start: "", end_date: "", selectedSubTypeId: "", months: "" });
     } catch (e: any) {
       let errorMessage = "Erreur lors de la création de l'abonnement";
       if (e?.message) {
@@ -419,6 +499,117 @@ export default function GestionAbonnementPage() {
         </div>
       </div>
 
+      {/* Subscription Types Management Section */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        {/* Section Header with Toggle */}
+        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-pink-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setSubTypesSectionOpen(!subTypesSectionOpen)}
+                className="p-2 rounded-lg hover:bg-white/50 transition-colors"
+                title={subTypesSectionOpen ? "Réduire" : "Développer"}
+              >
+                <svg 
+                  className={`w-5 h-5 text-gray-600 transition-transform duration-200 ${subTypesSectionOpen ? 'rotate-180' : ''}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Gestion des Plans d'Abonnement</h2>
+                <p className="text-sm text-gray-600 mt-0.5">Gérez les plans d'abonnement disponibles</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowCreateSubTypeModal(true)}
+              className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              <span>Ajouter Plan</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Collapsible Content */}
+        {subTypesSectionOpen && (
+          <div className="p-6">
+            {loadingSubTypes ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#007BFF]"></div>
+              </div>
+            ) : subTypes.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                </div>
+                <p className="text-gray-500 font-medium">Aucun plan d'abonnement trouvé</p>
+                <p className="text-sm text-gray-400 mt-1">Cliquez sur "Ajouter Plan" pour créer votre premier plan</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {subTypes.map((subType) => (
+                  <div
+                    key={subType.id}
+                    className="group relative bg-gradient-to-br from-white to-gray-50 rounded-xl p-4 border border-gray-200 hover:border-purple-300 transition-all duration-200 hover:shadow-md"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            </svg>
+                          </div>
+                          <h3 className="font-semibold text-gray-900 text-lg">{subType.name}</h3>
+                        </div>
+                        <div className="space-y-1 mb-3">
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Prix:</span> {subType.price.toLocaleString()} DA
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Durée:</span> {subType.duration} jour{subType.duration > 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          Créé le {new Date(subType.created_at).toLocaleDateString('fr-FR')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 mt-4 pt-4 border-t border-gray-100">
+                      <button
+                        onClick={() => handleEditSubType(subType)}
+                        className="flex-1 px-3 py-2 bg-[#007BFF] text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        <span>Modifier</span>
+                      </button>
+                      <button
+                        onClick={() => setDeletingSubType(subType)}
+                        className="px-3 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Section: Docteurs sans abonnement (status=false) */}
       <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100 overflow-hidden">
         <div className="flex items-center justify-between mb-8">
@@ -550,103 +741,152 @@ export default function GestionAbonnementPage() {
         </div>
       )}
 
-      {/* Abonnements Table */}
+      {/* Abonnements Cards */}
       {!loading && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Docteur</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Période</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredAbos.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                      <div className="flex flex-col items-center">
-                        <svg className="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <p className="text-lg font-medium">Aucun abonnement trouvé</p>
-                        <p className="text-sm mt-1">Les abonnements apparaîtront ici une fois créés</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredAbos.map((subscription) => (
-                <tr key={subscription.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-[#007BFF] rounded-full flex items-center justify-center mr-3">
-                        <span className="text-white font-medium text-sm">
+        <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100 overflow-hidden">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Liste des Abonnements</h3>
+                <p className="text-sm text-gray-500 mt-1">Gérez tous les abonnements actifs et expirés</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-full border border-green-100">
+              <span className="text-lg font-bold text-green-600">{filteredAbos.length}</span>
+              <span className="text-sm text-gray-600 font-medium">abonnement{filteredAbos.length > 1 ? 's' : ''}</span>
+            </div>
+          </div>
+
+          {filteredAbos.length === 0 ? (
+            <div className="text-center py-16 animate-fade-in">
+              <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <p className="text-gray-500 font-medium">Aucun abonnement trouvé</p>
+              <p className="text-sm text-gray-400 mt-1">Les abonnements apparaîtront ici une fois créés</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredAbos.map((subscription, index) => {
+                const today = new Date();
+                const endDate = new Date(subscription.end_date);
+                const isActive = endDate >= today;
+                const daysRemaining = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                
+                return (
+                  <div
+                    key={subscription.id}
+                    className="group relative bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 border border-gray-200 hover:border-[#007BFF]/30 transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+                    style={{
+                      animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both`
+                    }}
+                  >
+                    {/* Animated border gradient on hover */}
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#007BFF] to-blue-600 opacity-0 group-hover:opacity-5 transition-opacity duration-300"></div>
+                    
+                    {/* Status Badge */}
+                    <div className="absolute top-4 right-4">
+                      <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                        isActive 
+                          ? 'bg-green-100 text-green-800 border border-green-200' 
+                          : 'bg-red-100 text-red-800 border border-red-200'
+                      }`}>
+                        {isActive ? 'Actif' : 'Expiré'}
+                      </span>
+                    </div>
+
+                    <div className="relative">
+                      {/* Doctor Info */}
+                      <div className="flex items-start mb-4">
+                        <div className="w-14 h-14 bg-gradient-to-br from-[#007BFF] to-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg transform group-hover:scale-110 transition-transform duration-300">
                           {(subscription.doctors?.first_name?.[0] || 'D') + (subscription.doctors?.last_name?.[0] || 'R')}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {subscription.doctors?.first_name || '—'} {subscription.doctors?.last_name || ''}
                         </div>
-                        {subscription.doctors?.email && (
-                          <div className="text-sm text-gray-500">{subscription.doctors.email}</div>
+                        <div className="ml-4 flex-1">
+                          <h4 className="font-bold text-gray-900 text-lg group-hover:text-[#007BFF] transition-colors duration-300">
+                            {subscription.doctors?.first_name || '—'} {subscription.doctors?.last_name || ''}
+                          </h4>
+                          {subscription.doctors?.email && (
+                            <p className="text-sm text-gray-500 mt-1 truncate">{subscription.doctors.email}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Subscription Details */}
+                      <div className="space-y-3 mb-4 pb-4 border-b border-gray-100">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Type:</span>
+                          <span className="text-sm font-semibold text-gray-900">{subscription.type}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Prix:</span>
+                          <span className="text-lg font-bold text-[#007BFF]">{subscription.price.toLocaleString()} DA</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Début:</span>
+                          <span className="text-sm font-medium text-gray-900">{new Date(subscription.start).toLocaleDateString('fr-FR')}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Fin:</span>
+                          <span className="text-sm font-medium text-gray-900">{new Date(subscription.end_date).toLocaleDateString('fr-FR')}</span>
+                        </div>
+                        {isActive && daysRemaining > 0 && (
+                          <div className="mt-2 pt-2 border-t border-gray-100">
+                            <div className="flex items-center space-x-2">
+                              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span className="text-xs font-medium text-green-700">
+                                {daysRemaining} jour{daysRemaining > 1 ? 's' : ''} restant{daysRemaining > 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          </div>
                         )}
                       </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => setViewAbonnement(subscription)}
+                          className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center space-x-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          <span>Détails</span>
+                        </button>
+                        <button
+                          onClick={() => openEdit(subscription)}
+                          className="px-3 py-2 bg-[#007BFF] text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+                          title="Modifier"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => setDeleteAbonnement(subscription)}
+                          className="px-3 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center"
+                          title="Supprimer"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{subscription.type}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div>{subscription.start}</div>
-                    <div>{subscription.end_date}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {subscription.price} DA 
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
-                      <button 
-                        onClick={() => setViewAbonnement(subscription)}
-                        className="text-[#007BFF] hover:text-blue-700 p-1 transition-colors" 
-                        title="Voir détails"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      </button>
-                      <button 
-                        onClick={() => openEdit(subscription)}
-                        className="text-green-600 hover:text-green-700 p-1 transition-colors" 
-                        title="Modifier"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button 
-                        onClick={() => setDeleteAbonnement(subscription)}
-                        className="text-red-600 hover:text-red-700 p-1 transition-colors" 
-                        title="Supprimer"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -700,15 +940,21 @@ export default function GestionAbonnementPage() {
                       <p className="text-xs text-gray-500 mt-1">Date automatiquement définie à aujourd'hui</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Fin</label>
-                      <input 
-                        type="date" 
-                        value={form.end_date} 
-                        min={form.start || new Date().toISOString().split('T')[0]}
-                        onChange={(e) => setForm({ ...form, end_date: e.target.value })} 
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent" 
-                        required 
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Durée (mois) <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        value={form.months ? `${form.months} ${parseInt(form.months) === 1 ? 'mois' : 'mois'}` : ''}
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 cursor-not-allowed"
+                        placeholder="Sélectionnez un plan pour définir la durée"
+                        required
                       />
+                      {form.end_date && (
+                        <p className="text-xs text-gray-500 mt-1">Date de fin: {new Date(form.end_date).toLocaleDateString('fr-FR')}</p>
+                      )}
+                      {!form.months && (
+                        <p className="text-xs text-gray-500 mt-1">La durée sera définie automatiquement selon le plan sélectionné</p>
+                      )}
                     </div>
                   </div>
                 </form>
@@ -944,8 +1190,7 @@ export default function GestionAbonnementPage() {
                   <button
                     onClick={() => {
                       setShowCreateSubTypeModal(false);
-                      setSubTypeForm({ name: "", price: "", start: "", end: "" });
-                      setCalculatedDuration(null);
+                      setSubTypeForm({ name: "", price: "", months: "" });
                     }}
                     className="text-gray-400 hover:text-gray-600"
                   >
@@ -978,43 +1223,30 @@ export default function GestionAbonnementPage() {
                       required
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Début</label>
-                      <input
-                        type="date"
-                        value={subTypeForm.start}
-                        onChange={(e) => handleSubTypeFormChange('start', e.target.value)}
-                        max={subTypeForm.end || undefined}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Fin</label>
-                      <input
-                        type="date"
-                        value={subTypeForm.end}
-                        onChange={(e) => handleSubTypeFormChange('end', e.target.value)}
-                        min={subTypeForm.start || undefined}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
-                        required
-                      />
-                    </div>
-                  </div>
-                  {calculatedDuration !== null && calculatedDuration > 0 && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-blue-900">Durée calculée:</span>
-                        <span className="text-sm font-bold text-blue-700">{calculatedDuration} jour{calculatedDuration > 1 ? 's' : ''}</span>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Durée (mois) <span className="text-red-500">*</span></label>
+                    <select
+                      value={subTypeForm.months}
+                      onChange={(e) => handleSubTypeFormChange('months', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                      required
+                    >
+                      <option value="">Sélectionner une durée</option>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 24, 36].map((month) => (
+                        <option key={month} value={month}>
+                          {month} {month === 1 ? 'mois' : 'mois'}
+                        </option>
+                      ))}
+                    </select>
+                    {subTypeForm.months && (
+                      <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-blue-900">Durée calculée:</span>
+                          <span className="text-sm font-bold text-blue-700">{calculateDurationFromMonths(parseInt(subTypeForm.months))} jour{calculateDurationFromMonths(parseInt(subTypeForm.months)) > 1 ? 's' : ''}</span>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {calculatedDuration !== null && calculatedDuration <= 0 && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                      <p className="text-sm text-red-700">La date de fin doit être supérieure à la date de début</p>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </form>
               </div>
               <div className="bg-gray-50 px-6 py-4 sm:flex sm:flex-row-reverse">
@@ -1030,9 +1262,150 @@ export default function GestionAbonnementPage() {
                   type="button"
                   onClick={() => {
                     setShowCreateSubTypeModal(false);
-                    setSubTypeForm({ name: "", price: "", start: "", end: "" });
-                    setCalculatedDuration(null);
+                    setSubTypeForm({ name: "", price: "", months: "" });
                   }}
+                  className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Sub Type Modal */}
+      {editingSubType && (
+        <div className="fixed inset-0 z-[9999] overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity bg-gray-500 opacity-75 z-[9998]" onClick={() => {
+              setEditingSubType(null);
+              setEditSubTypeForm({ name: "", price: "", duration: "" });
+            }}></div>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full relative z-[9999]">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">Modifier le Plan d'Abonnement</h3>
+                  <button
+                    onClick={() => {
+                      setEditingSubType(null);
+                      setEditSubTypeForm({ name: "", price: "", duration: "" });
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nom du plan <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editSubTypeForm.name}
+                      onChange={(e) => setEditSubTypeForm({...editSubTypeForm, name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                      placeholder="Ex: Plan Premium"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Prix (DA) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={editSubTypeForm.price}
+                      onChange={(e) => setEditSubTypeForm({...editSubTypeForm, price: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                      placeholder="0.00"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Durée (jours) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={editSubTypeForm.duration}
+                      onChange={(e) => setEditSubTypeForm({...editSubTypeForm, duration: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                      placeholder="30"
+                      min="1"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={handleUpdateSubType}
+                  disabled={updatingSubType || !editSubTypeForm.name.trim() || !editSubTypeForm.price || !editSubTypeForm.duration}
+                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-[#007BFF] text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#007BFF] disabled:opacity-50 disabled:cursor-not-allowed sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  {updatingSubType ? "Mise à jour..." : "Enregistrer"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingSubType(null);
+                    setEditSubTypeForm({ name: "", price: "", duration: "" });
+                  }}
+                  className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Sub Type Confirmation Modal */}
+      {deletingSubType && (
+        <div className="fixed inset-0 z-[9999] overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity bg-gray-500 opacity-75 z-[9998]" onClick={() => setDeletingSubType(null)}></div>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full relative z-[9999]">
+              <div className="bg-white px-6 pt-6 pb-4">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 mr-3">
+                    <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900">Confirmer la suppression</h3>
+                    <p className="mt-2 text-sm text-gray-600">
+                      Êtes-vous sûr de vouloir supprimer le plan d'abonnement <span className="font-medium">"{deletingSubType.name}"</span> ? 
+                      Cette action est irréversible.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-6 py-4 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={handleDeleteSubType}
+                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Supprimer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeletingSubType(null)}
                   className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Annuler

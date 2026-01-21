@@ -10,6 +10,7 @@ interface Event {
   start_date: string;
   end_date: string | null;
   location: string | null;
+  image: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -183,26 +184,42 @@ export default function EventPage() {
               return (
                 <div
                   key={event.id}
-                  className={`bg-white rounded-xl p-6 shadow-sm border transition-all duration-200 hover:shadow-md ${
+                  className={`bg-white rounded-xl overflow-hidden shadow-sm border transition-all duration-200 hover:shadow-md ${
                     isPast
                       ? "border-gray-200 bg-gray-50 opacity-75"
                       : "border-gray-100"
                   }`}
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className={`text-lg font-semibold mb-2 ${isPast ? "text-gray-500" : "text-gray-900"}`}>
-                        {event.title}
-                      </h3>
-                      {event.description && (
-                        <p className={`text-sm mb-3 ${isPast ? "text-gray-400" : "text-gray-600"}`}>
-                          {event.description.length > 100
-                            ? `${event.description.substring(0, 100)}...`
-                            : event.description}
-                        </p>
-                      )}
+                  {/* Event Image */}
+                  {event.image && (
+                    <div className="w-full h-48 overflow-hidden bg-gray-100">
+                      <img
+                        src={event.image}
+                        alt={event.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Hide image if it fails to load
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
                     </div>
-                  </div>
+                  )}
+                  
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <h3 className={`text-lg font-semibold mb-2 ${isPast ? "text-gray-500" : "text-gray-900"}`}>
+                          {event.title}
+                        </h3>
+                        {event.description && (
+                          <p className={`text-sm mb-3 ${isPast ? "text-gray-400" : "text-gray-600"}`}>
+                            {event.description.length > 100
+                              ? `${event.description.substring(0, 100)}...`
+                              : event.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
 
                   <div className={`space-y-2 mb-4 ${isPast ? "text-gray-400" : "text-gray-600"}`}>
                     <div className="flex items-center space-x-2 text-sm">
@@ -230,16 +247,17 @@ export default function EventPage() {
                     )}
                   </div>
 
-                  <button
-                    onClick={() => handleViewRegistrations(event)}
-                    className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
-                      isPast
-                        ? "bg-gray-200 text-gray-600 hover:bg-gray-300"
-                        : "bg-[#007BFF] text-white hover:bg-blue-700"
-                    }`}
-                  >
-                    Voir les inscriptions
-                  </button>
+                    <button
+                      onClick={() => handleViewRegistrations(event)}
+                      className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
+                        isPast
+                          ? "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                          : "bg-[#007BFF] text-white hover:bg-blue-700"
+                      }`}
+                    >
+                      Voir les inscriptions
+                    </button>
+                  </div>
                 </div>
               );
             })

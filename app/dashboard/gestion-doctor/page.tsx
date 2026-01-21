@@ -56,7 +56,25 @@ export default function GestionDoctorPage() {
   const [editFieldName, setEditFieldName] = useState("");
   const [deletingField, setDeletingField] = useState<{ id: string; name: string } | null>(null);
   const [updatingField, setUpdatingField] = useState(false);
-  const [fieldsSectionOpen, setFieldsSectionOpen] = useState(true);
+  const [fieldsSectionOpen, setFieldsSectionOpen] = useState(false);
+  
+  // Edit doctor state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    field: "",
+  });
+  const [updatingDoctor, setUpdatingDoctor] = useState(false);
+  
+  // Create abonnement state (for pending doctors)
+  const [showCreateAbonnementModal, setShowCreateAbonnementModal] = useState(false);
+  const [doctorForAbonnement, setDoctorForAbonnement] = useState<Doctor | null>(null);
+  const [abonnementForm, setAbonnementForm] = useState({ type: "", price: "", start: "", end_date: "", selectedSubTypeId: "", months: "" });
+  const [subTypes, setSubTypes] = useState<Array<{ id: string; name: string; price: number; duration: number; created_at: string; updated_at: string }>>([]);
 
   // Load doctors from Supabase
   useEffect(() => {
@@ -92,6 +110,19 @@ export default function GestionDoctorPage() {
     };
 
     loadFields();
+  }, []);
+
+  // Load subscription types
+  useEffect(() => {
+    const loadSubTypes = async () => {
+      try {
+        const data = await DatabaseService.getSubTypes();
+        setSubTypes(data || []);
+      } catch (e: any) {
+        console.error('Error loading subscription types:', e);
+      }
+    };
+    loadSubTypes();
   }, []);
 
   const filteredDoctors = doctors.filter(doctor => {
@@ -240,6 +271,160 @@ export default function GestionDoctorPage() {
         console.error('Error deleting doctor:', e);
         alert("Erreur lors de la suppression: " + (e?.message || "Erreur inconnue"));
       }
+    }
+  };
+
+  // Handle edit doctor
+  const handleEditDoctor = (doctor: Doctor) => {
+    setEditingDoctor(doctor);
+    setEditFormData({
+      first_name: doctor.first_name || "",
+      last_name: doctor.last_name || "",
+      email: doctor.email || "",
+      phone: doctor.phone || "",
+      field: doctor.field || "",
+    });
+    setShowEditModal(true);
+  };
+
+  // Handle update doctor
+  const handleUpdateDoctor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDoctor) return;
+
+    setUpdatingDoctor(true);
+    try {
+      const updated = await DatabaseService.updateDoctor(editingDoctor.id, {
+        first_name: editFormData.first_name || null,
+        last_name: editFormData.last_name || null,
+        email: editFormData.email || null,
+        phone: editFormData.phone || null,
+        field: editFormData.field || null,
+      });
+
+      // Refresh doctors list
+      const data = await DatabaseService.getDoctors();
+      setDoctors(data || []);
+
+      setShowEditModal(false);
+      setEditingDoctor(null);
+      setEditFormData({ first_name: "", last_name: "", email: "", phone: "", field: "" });
+      alert("Docteur mis à jour avec succès !");
+    } catch (e: any) {
+      console.error('Error updating doctor:', e);
+      alert("Erreur lors de la mise à jour: " + (e?.message || "Erreur inconnue"));
+    } finally {
+      setUpdatingDoctor(false);
+    }
+  };
+
+  // Handle open create abonnement modal
+  const handleOpenCreateAbonnement = (doctor: Doctor) => {
+    setDoctorForAbonnement(doctor);
+    const today = new Date().toISOString().split('T')[0];
+    setAbonnementForm({ type: "", price: "", start: today, end_date: "", selectedSubTypeId: "", months: "" });
+    setShowCreateAbonnementModal(true);
+  };
+
+  // Handle subscription type selection
+  const handleSubTypeSelect = (subTypeId: string) => {
+    const selectedSubType = subTypes.find(st => st.id === subTypeId);
+    if (selectedSubType) {
+      const today = new Date(abonnementForm.start || new Date().toISOString().split('T')[0]);
+      const endDate = new Date(today);
+      endDate.setDate(endDate.getDate() + selectedSubType.duration);
+      
+      // Calculate months from duration (duration is in days, convert to months)
+      const months = Math.round(selectedSubType.duration / 30);
+      
+      setAbonnementForm({
+        ...abonnementForm,
+        selectedSubTypeId: subTypeId,
+        type: selectedSubType.name,
+        price: selectedSubType.price.toString(),
+        end_date: endDate.toISOString().split('T')[0],
+        months: months.toString(),
+      });
+    }
+  };
+
+  // Handle months change
+  const handleMonthsChange = (months: string) => {
+    const monthsNum = parseInt(months);
+    if (!Number.isNaN(monthsNum) && monthsNum > 0) {
+      const today = new Date(abonnementForm.start || new Date().toISOString().split('T')[0]);
+      const endDate = new Date(today);
+      endDate.setMonth(endDate.getMonth() + monthsNum);
+      
+      setAbonnementForm({
+        ...abonnementForm,
+        months: months,
+        end_date: endDate.toISOString().split('T')[0],
+      });
+    } else {
+      setAbonnementForm({ ...abonnementForm, months: months, end_date: "" });
+    }
+  };
+
+  // Handle create abonnement
+  const handleCreateAbonnement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!doctorForAbonnement) return;
+    const price = parseFloat(abonnementForm.price);
+    if (Number.isNaN(price)) return alert("Prix invalide");
+    
+    // Validate months
+    if (!abonnementForm.months || parseInt(abonnementForm.months) <= 0) {
+      return alert("Veuillez sélectionner une durée en mois");
+    }
+    
+    // Validate dates
+    if (!abonnementForm.start || !abonnementForm.end_date) {
+      return alert("Veuillez sélectionner une durée en mois");
+    }
+    
+    if (new Date(abonnementForm.end_date) < new Date(abonnementForm.start)) {
+      return alert("La date de fin doit être supérieure ou égale à la date de début");
+    }
+    
+    try {
+      // Get all existing abonnements for this doctor from database to calculate count
+      const allAbonnements = await DatabaseService.getAbonnements();
+      const existingAbonnements = allAbonnements.filter(ab => ab.id_doctor === doctorForAbonnement.id);
+      const currentCount = existingAbonnements.length;
+      const newCount = currentCount + 1;
+      
+      // Create the abonnement with calculated count
+      await DatabaseService.createAbonnement({
+        id_doctor: doctorForAbonnement.id,
+        type: abonnementForm.type,
+        price,
+        start: abonnementForm.start,
+        end_date: abonnementForm.end_date,
+        count: newCount,
+      });
+      
+      // Update doctor status to true (active)
+      await DatabaseService.updateDoctor(doctorForAbonnement.id, { status: true as any });
+      
+      // Refresh doctors list
+      const data = await DatabaseService.getDoctors();
+      setDoctors(data || []);
+      
+      setShowCreateAbonnementModal(false);
+      setDoctorForAbonnement(null);
+      setAbonnementForm({ type: "", price: "", start: "", end_date: "", selectedSubTypeId: "", months: "" });
+      alert("Abonnement créé avec succès !");
+    } catch (e: any) {
+      let errorMessage = "Erreur lors de la création de l'abonnement";
+      if (e?.message) {
+        if (e.message.includes("abonnements_date_check")) {
+          errorMessage = "La date de fin doit être supérieure ou égale à la date de début";
+        } else {
+          errorMessage = e.message;
+        }
+      }
+      alert(errorMessage);
     }
   };
 
@@ -851,7 +1036,12 @@ Rapport généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().t
                               </span>
                             </div>
                             <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{fullName}</div>
+                              <button
+                                onClick={() => handleEditDoctor(doctor)}
+                                className="text-sm font-medium text-gray-900 hover:text-[#007BFF] transition-colors cursor-pointer"
+                              >
+                                {fullName}
+                              </button>
                               <div className="text-sm text-gray-500">
                                 {new Date(doctor.created_at).toLocaleDateString('fr-FR')}
                               </div>
@@ -868,9 +1058,19 @@ Rapport généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().t
                           <div className="text-sm text-gray-500">{doctor.phone || 'N/A'}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(doctor.status)}`}>
+                          <button
+                            onClick={() => {
+                              if (doctor.status === false) {
+                                handleOpenCreateAbonnement(doctor);
+                              } else {
+                                handleEditDoctor(doctor);
+                              }
+                            }}
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(doctor.status)} hover:opacity-80 transition-opacity cursor-pointer`}
+                            title={doctor.status === false ? "Créer un abonnement" : "Modifier le docteur"}
+                          >
                             {getStatusText(doctor.status)}
-                          </span>
+                          </button>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {new Date(doctor.created_at).toLocaleDateString('fr-FR', {
@@ -880,15 +1080,26 @@ Rapport généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().t
                           })}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() => handleDeleteDoctor(doctor.id)}
-                            className="text-red-600 hover:text-red-700 p-1"
-                            title="Supprimer"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                          <div className="flex items-center justify-end space-x-2">
+                            <button
+                              onClick={() => handleEditDoctor(doctor)}
+                              className="text-[#007BFF] hover:text-blue-700 p-1"
+                              title="Modifier"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteDoctor(doctor.id)}
+                              className="text-red-600 hover:text-red-700 p-1"
+                              title="Supprimer"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1326,6 +1537,213 @@ Rapport généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().t
                 >
                   Annuler
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Doctor Modal */}
+      {showEditModal && editingDoctor && (
+        <div className="fixed inset-0 z-[9999] overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity bg-gray-500 opacity-75 z-[9998]" onClick={() => {
+              setShowEditModal(false);
+              setEditingDoctor(null);
+              setEditFormData({ first_name: "", last_name: "", email: "", phone: "", field: "" });
+            }}></div>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full relative z-[9999]">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">Modifier le Docteur</h3>
+                  <button
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setEditingDoctor(null);
+                      setEditFormData({ first_name: "", last_name: "", email: "", phone: "", field: "" });
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <form onSubmit={handleUpdateDoctor} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Prénom <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormData.first_name}
+                      onChange={(e) => setEditFormData({ ...editFormData, first_name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                      placeholder="Prénom"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nom <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormData.last_name}
+                      onChange={(e) => setEditFormData({ ...editFormData, last_name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                      placeholder="Nom"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={editFormData.email}
+                      onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                      placeholder="email@doctorapp.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+                    <input
+                      type="tel"
+                      value={editFormData.phone}
+                      onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                      placeholder="+33 6 12 34 56 78"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Domaine</label>
+                    <select 
+                      value={editFormData.field}
+                      onChange={(e) => setEditFormData({ ...editFormData, field: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                    >
+                      <option value="">Sélectionner un domaine</option>
+                      {existingFields.map((field) => (
+                        <option key={field.id} value={field.name}>
+                          {field.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </form>
+              </div>
+
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={handleUpdateDoctor}
+                  disabled={updatingDoctor}
+                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-[#007BFF] text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#007BFF] disabled:opacity-50 disabled:cursor-not-allowed sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  {updatingDoctor ? "Mise à jour..." : "Enregistrer"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingDoctor(null);
+                    setEditFormData({ first_name: "", last_name: "", email: "", phone: "", field: "" });
+                  }}
+                  className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Abonnement Modal */}
+      {showCreateAbonnementModal && doctorForAbonnement && (
+        <div className="fixed inset-0 z-[9999] overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity bg-gray-500 opacity-75 z-[9998]" onClick={() => {
+              setShowCreateAbonnementModal(false);
+              setDoctorForAbonnement(null);
+              setAbonnementForm({ type: "", price: "", start: "", end_date: "", selectedSubTypeId: "", months: "" });
+            }}></div>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full relative z-[9999]">
+              <div className="bg-white px-6 pt-6 pb-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Créer un abonnement pour {doctorForAbonnement.first_name || 'Docteur'}</h3>
+                <form onSubmit={handleCreateAbonnement} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <select
+                      value={abonnementForm.selectedSubTypeId}
+                      onChange={(e) => handleSubTypeSelect(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                      required
+                    >
+                      <option value="">Sélectionner un plan</option>
+                      {subTypes.map((subType) => (
+                        <option key={subType.id} value={subType.id}>
+                          {subType.name} - {subType.price} DA ({subType.duration} jours)
+                        </option>
+                      ))}
+                    </select>
+                    {abonnementForm.type && (
+                      <p className="text-xs text-gray-500 mt-1">Plan sélectionné: {abonnementForm.type}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Prix (DA)</label>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      value={abonnementForm.price} 
+                      onChange={(e) => setAbonnementForm({ ...abonnementForm, price: e.target.value })} 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007BFF] focus:border-transparent" 
+                      placeholder="0.00" 
+                      required 
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Début</label>
+                      <input type="date" value={abonnementForm.start} readOnly className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 cursor-not-allowed" required />
+                      <p className="text-xs text-gray-500 mt-1">Date automatiquement définie à aujourd'hui</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Durée (mois) <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        value={abonnementForm.months ? `${abonnementForm.months} ${parseInt(abonnementForm.months) === 1 ? 'mois' : 'mois'}` : ''}
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 cursor-not-allowed"
+                        placeholder="Sélectionnez un plan pour définir la durée"
+                        required
+                      />
+                      {abonnementForm.end_date && (
+                        <p className="text-xs text-gray-500 mt-1">Date de fin: {new Date(abonnementForm.end_date).toLocaleDateString('fr-FR')}</p>
+                      )}
+                      {!abonnementForm.months && (
+                        <p className="text-xs text-gray-500 mt-1">La durée sera définie automatiquement selon le plan sélectionné</p>
+                      )}
+                    </div>
+                  </div>
+                </form>
+              </div>
+              <div className="bg-gray-50 px-6 py-4 sm:flex sm:flex-row-reverse">
+                <button type="button" onClick={handleCreateAbonnement} className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-[#007BFF] text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#007BFF] sm:ml-3 sm:w-auto sm:text-sm">Créer</button>
+                <button type="button" onClick={() => {
+                  setShowCreateAbonnementModal(false);
+                  setDoctorForAbonnement(null);
+                  setAbonnementForm({ type: "", price: "", start: "", end_date: "", selectedSubTypeId: "", months: "" });
+                }} className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">Annuler</button>
               </div>
             </div>
           </div>
