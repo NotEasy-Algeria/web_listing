@@ -189,12 +189,12 @@ export default function GestionDoctorPage() {
 
       // Step 1: Create user in Supabase Auth
       // This creates the authentication account and handles password securely
-      // Supabase Auth will automatically send a confirmation email
+      // We'll send a custom confirmation email with our own link
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `https://web-listing.vercel.app/confirme`,
           data: {
             first_name: formData.first_name,
             last_name: formData.last_name,
@@ -251,7 +251,7 @@ export default function GestionDoctorPage() {
       
       // Show success modal
       setSuccessMessage(
-        `Docteur créé avec succès ! Un compte Supabase Auth a été créé pour ${doctorEmail}. Un email de confirmation a été envoyé. Le docteur devra confirmer son email avant de pouvoir se connecter avec le mot de passe fourni.`
+        `Docteur créé avec succès ! Un compte Supabase Auth a été créé pour ${doctorEmail}. Un email de confirmation a été envoyé à ${doctorEmail}. Le docteur devra cliquer sur le lien dans l'email pour confirmer son compte et pourra ensuite se connecter à l'application mobile.`
       );
       setShowSuccessModal(true);
     } catch (e: any) {
