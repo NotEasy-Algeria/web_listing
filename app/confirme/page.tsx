@@ -326,9 +326,9 @@ function ConfirmeContent() {
 
         {status === "success" && (
           <div className="text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
               <svg
-                className="w-8 h-8 text-green-600"
+                className="w-10 h-10 text-white"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -336,32 +336,41 @@ function ConfirmeContent() {
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={2}
+                  strokeWidth={3}
                   d="M5 13l4 4L19 7"
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Email confirmé !</h1>
-            <p className="text-gray-600 mb-4">{message}</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-3">✅ Email confirmé avec succès !</h1>
+            <p className="text-gray-700 mb-2 text-lg font-medium">{message}</p>
             <p className="text-sm text-gray-500 mb-6">
-              Redirection vers l'application en cours...
+              Votre compte a été activé. Vous pouvez maintenant vous connecter à l'application.
             </p>
-            <button
-              onClick={() => {
-                window.location.href = "medicalapp://auth/confirmed";
-              }}
-              className="bg-[#007BFF] text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Ouvrir l'application
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  try {
+                    window.location.href = "medicalapp://auth/confirmed";
+                  } catch (e) {
+                    console.log("Deep link not available");
+                  }
+                }}
+                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md font-semibold text-base"
+              >
+                Ouvrir l'application
+              </button>
+              <p className="text-xs text-gray-400 mt-4">
+                Redirection automatique dans quelques secondes...
+              </p>
+            </div>
           </div>
         )}
 
         {status === "error" && (
           <div className="text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-20 h-20 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
               <svg
-                className="w-8 h-8 text-red-600"
+                className="w-10 h-10 text-white"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -369,19 +378,35 @@ function ConfirmeContent() {
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={2}
+                  strokeWidth={3}
                   d="M6 18L18 6M6 6l12 12"
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Erreur</h1>
-            <p className="text-gray-600 mb-6">{message}</p>
-            <button
-              onClick={() => router.push("/")}
-              className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              Retour à l'accueil
-            </button>
+            <h1 className="text-3xl font-bold text-gray-900 mb-3">❌ Erreur de confirmation</h1>
+            <p className="text-gray-700 mb-4 text-lg">{message}</p>
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 text-left rounded">
+              <p className="text-sm text-yellow-800">
+                <strong>💡 Que faire ?</strong><br />
+                • Vérifiez que vous avez utilisé le lien complet depuis votre email<br />
+                • Assurez-vous que le lien n'a pas expiré (valable 24h)<br />
+                • Contactez le support si le problème persiste
+              </p>
+            </div>
+            <div className="space-y-3">
+              <button
+                onClick={() => router.push("/")}
+                className="w-full bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors shadow-md font-semibold text-base"
+              >
+                Retour à l'accueil
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors shadow-md font-semibold text-base"
+              >
+                Réessayer
+              </button>
+            </div>
           </div>
         )}
       </div>
