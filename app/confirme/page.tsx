@@ -172,17 +172,9 @@ function ConfirmeContent() {
             }
 
             if (session?.user) {
-              // Security: Verify user email is confirmed
-              if (!session.user.email_confirmed_at) {
-                // Try to confirm the email
-                const { error: confirmError } = await supabase.auth.updateUser({
-                  email_confirm: true
-                });
-                
-                if (confirmError) {
-                  console.error("Error confirming email:", confirmError);
-                }
-              }
+              // Note: When setSession() is called with a confirmation token,
+              // Supabase automatically confirms the email and sets email_confirmed_at.
+              // No manual confirmation is needed.
 
               // Security: Verify the user exists in doctors table
               const { data: doctorData, error: doctorError } = await supabase
